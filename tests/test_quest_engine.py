@@ -159,3 +159,21 @@ def test_replace_quest_past_date(db_session, user, sample_quests):
     result = replace_quest(db_session, user, quests[0].id, sample_quests, date(2026, 4, 19))
     assert result["success"] is False
     assert result["reason"] == "past_quest"
+
+
+def test_generate_excludes_recent_completed(db_session, user, sample_quests):
+    # 어제 퀘스트 완료
+    yesterday_quest = DailyQuest(
+        user_id=user.id, quest_date=date(2026, 4, 18),
+        category="건강", title="물 마시기", description="물 한 잔",
+        estimated_minutes=1, difficulty="easy",
+        reward_xp=5, reward_stat_type="health", reward_stat_value=1,
+        state="COMPLETED",
+    )
+    db_session.add(yesterday_quest)
+    db_session.commit()
+
+    # 오늘 퀘스트 생성
+    quests = generate_daily_quests(db_session, user, sample_quests, date(2026, 4, 19))
+    titles = [q.title for q in quests]
+    assert "물 마시기" not in titles

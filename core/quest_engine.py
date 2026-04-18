@@ -1,9 +1,32 @@
 import random
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 from core.models import User, DailyQuest, QuestLog
 from core.quest_loader import filter_quests
 from config import CATEGORY_STAT_MAP, DIFFICULTY_REWARDS
+
+
+def _get_recent_completion_rate(session: Session, user: User, game_date: date) -> float:
+    """최근 3일 완료율 계산. 퀘스트가 없으면 1.0 반환."""
+    total = 0
+    completed = 0
+    for days_ago in range(1, 4):
+        past_date = game_date - timedelta(days=days_ago)
+        past_quests = (
+            session.query(DailyQuest)
+            .filter(
+                DailyQuest.user_id == user.id,
+                DailyQuest.quest_date == past_date,
+            )
+            .all()
+        )
+        for pq in past_quests:
+            total += 1
+            if pq.state == "COMPLETED":
+                completed += 1
+    if total == 0:
+        return 1.0
+    return completed / total
 
 
 def generate_daily_quests(
@@ -36,6 +59,31 @@ def generate_daily_quests(
         for q in all_filtered:
             if q not in filtered:
                 filtered.append(q)
+
+    # 최근 3일 완료 퀘스트 제외
+    recent_titles = set()
+    for days_ago in range(1, 4):
+        past_date = game_date - timedelta(days=days_ago)
+        past_quests = (
+            session.query(DailyQuest)
+            .filter(
+                DailyQuest.user_id == user.id,
+                DailyQuest.quest_date == past_date,
+                DailyQuest.state == "COMPLETED",
+            )
+            .all()
+        )
+        for pq in past_quests:
+            recent_titles.add(pq.title)
+
+    filtered = [q for q in filtered if q["title"] not in recent_titles]
+
+    # 최근 완료율 낮으면 easy 위주로
+    completion_rate = _get_recent_completion_rate(session, user, game_date)
+    if completion_rate < 0.5 and filtered:
+        easy_quests = [q for q in filtered if q["difficulty"] == "easy"]
+        if len(easy_quests) >= 3:
+            filtered = easy_quests
 
     count = min(3, len(filtered))
     selected = random.sample(filtered, count)
