@@ -1,0 +1,180 @@
+categories:
+  건강:
+    quests:
+      - title: "물 한 잔 마시기"
+        description: "일어나서 물 한 잔을 마셔보세요"
+        estimated_minutes: 1
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "5분 스트레칭"
+        description: "간단한 전신 스트레칭을 해보세요"
+        estimated_minutes: 5
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "10분 걷기"
+        description: "가볍게 동네를 걸어보세요"
+        estimated_minutes: 10
+        difficulty: normal
+        energy: [normal, high]
+        time_budget: [medium, long]
+      - title: "20분 유산소 운동"
+        description: "걷기, 달리기, 자전거 중 하나를 선택하세요"
+        estimated_minutes: 20
+        difficulty: hard
+        energy: [normal, high]
+        time_budget: [medium, long]
+      - title: "수면 준비 체크"
+        description: "잠자기 30분 전 전자기기를 멀리 두세요"
+        estimated_minutes: 5
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+
+  회복:
+    quests:
+      - title: "심호흡 3분"
+        description: "편안한 자세로 깊게 호흡하세요"
+        estimated_minutes: 3
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "5분 명상"
+        description: "조용한 곳에서 눈을 감고 쉬세요"
+        estimated_minutes: 5
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "좋아하는 음악 1곡 듣기"
+        description: "좋아하는 노래를 하나 골라 편하게 들으세요"
+        estimated_minutes: 5
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+
+  집중:
+    quests:
+      - title: "5분 정리"
+        description: "책상 위 또는 주변을 5분간 정리하세요"
+        estimated_minutes: 5
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "15분 집중 작업"
+        description: "타이머를 맞추고 한 가지 일에 집중하세요"
+        estimated_minutes: 15
+        difficulty: normal
+        energy: [normal, high]
+        time_budget: [medium, long]
+      - title: "25분 뽀모도로"
+        description: "25분 집중 + 5분 휴식 한 세트를 해보세요"
+        estimated_minutes: 30
+        difficulty: hard
+        energy: [high]
+        time_budget: [long]
+
+  "일/커리어":
+    quests:
+      - title: "오늘 할 일 3개 적기"
+        description: "오늘 해야 할 가장 중요한 일 3개를 적으세요"
+        estimated_minutes: 3
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "업무 관련 10분 행동"
+        description: "미루던 업무 하나를 10분만 시작하세요"
+        estimated_minutes: 10
+        difficulty: normal
+        energy: [normal, high]
+        time_budget: [medium, long]
+      - title: "30분 프로젝트 작업"
+        description: "진행 중인 프로젝트에 30분을 투자하세요"
+        estimated_minutes: 30
+        difficulty: hard
+        energy: [high]
+        time_budget: [long]
+
+  "정리/생활":
+    quests:
+      - title: "설거지하기"
+        description: "싱크대에 쌓인 설거지를 해치우세요"
+        estimated_minutes: 10
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "빨래 돌리기"
+        description: "빨래를 모아서 세탁기를 돌리세요"
+        estimated_minutes: 5
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "방 정리 15분"
+        description: "방 한 곳을 골라 15분간 정리하세요"
+        estimated_minutes: 15
+        difficulty: normal
+        energy: [normal, high]
+        time_budget: [medium, long]
+
+  공부:
+    quests:
+      - title: "단어 5개 외우기"
+        description: "공부 중인 분야의 핵심 단어 5개를 복습하세요"
+        estimated_minutes: 5
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "10분 독서"
+        description: "읽고 있는 책을 10분간 읽으세요"
+        estimated_minutes: 10
+        difficulty: normal
+        energy: [normal, high]
+        time_budget: [medium, long]
+      - title: "강의 1개 시청"
+        description: "학습 중인 강의를 1개 들으세요"
+        estimated_minutes: 30
+        difficulty: hard
+        energy: [high]
+        time_budget: [long]
+
+  창작:
+    quests:
+      - title: "아이디어 3줄 정리"
+        description: "떠오르는 아이디어를 3줄로 메모하세요"
+        estimated_minutes: 3
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "초안 10분 쓰기"
+        description: "완벽하지 않아도 좋으니 10분만 써보세요"
+        estimated_minutes: 10
+        difficulty: normal
+        energy: [normal, high]
+        time_budget: [medium, long]
+      - title: "25분 집중 창작"
+        description: "작업물에 25분을 온전히 투자하세요"
+        estimated_minutes: 25
+        difficulty: hard
+        energy: [high]
+        time_budget: [long]
+
+  돈관리:
+    quests:
+      - title: "오늘 지출 기록"
+        description: "오늘 쓴 돈을 한 곳에 기록하세요"
+        estimated_minutes: 3
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "불필요한 구독 1개 확인"
+        description: "쓰지 않는 구독 서비스가 있는지 확인하세요"
+        estimated_minutes: 5
+        difficulty: normal
+        energy: [normal, high]
+        time_budget: [short, medium, long]
+      - title: "주간 예산 점검"
+        description: "이번 주 예산 대비 지출을 확인하세요"
+        estimated_minutes: 10
+        difficulty: normal
+        energy: [normal, high]
+        time_budget: [medium, long]
