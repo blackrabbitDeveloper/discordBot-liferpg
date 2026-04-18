@@ -32,7 +32,11 @@ class AdminCog(commands.Cog):
             # Discord 메시지 제한 2000자 → 파일로 전송
             if len(json_str) > 1800:
                 # 요약 Embed + JSON 파일 첨부
-                summary = data.get("summary", {})
+                retention = data.get("retention", {})
+                engagement = data.get("engagement", {})
+                quest = data.get("quest_analysis", {})
+                risk = data.get("risk", {})
+
                 embed = discord.Embed(
                     title=f"분석 리포트 ({data['period']})",
                     color=discord.Color.gold(),
@@ -43,28 +47,45 @@ class AdminCog(commands.Cog):
                     inline=True,
                 )
                 embed.add_field(
-                    name="온보딩 완료율",
-                    value=f"{summary.get('onboarding_completion_rate', 0)}%",
-                    inline=True,
-                )
-                embed.add_field(
-                    name="일일 완료율",
-                    value=f"{summary.get('avg_daily_completion_rate', 0)}%",
-                    inline=True,
-                )
-                embed.add_field(
-                    name="평균 스트릭",
-                    value=f"{summary.get('streak_avg', 0)}일",
-                    inline=True,
-                )
-                embed.add_field(
                     name="위험 유저",
-                    value=f"{summary.get('risk_users_count', 0)}명",
+                    value=f"{risk.get('risk_users_count', 0)}명",
+                    inline=True,
+                )
+                embed.add_field(name="\u200b", value="\u200b", inline=True)
+
+                # 유지율
+                embed.add_field(
+                    name="유지율 (핵심 지표)",
+                    value=(
+                        f"온보딩 완료: {retention.get('onboarding_completion_rate', 0)}%\n"
+                        f"첫 퀘스트 선택: {retention.get('first_quest_selection_rate', 0)}%\n"
+                        f"첫날 완료: {retention.get('first_day_completion_rate', 0)}%\n"
+                        f"Day1: {retention.get('day1_retention', 0)}% / "
+                        f"Day2: {retention.get('day2_retention', 0)}% / "
+                        f"Day3: {retention.get('day3_retention', 0)}%\n"
+                        f"Day7: {retention.get('day7_retention', 0)}%"
+                    ),
+                    inline=False,
+                )
+
+                # 참여도
+                embed.add_field(
+                    name="참여도",
+                    value=(
+                        f"일일 완료율: {engagement.get('avg_daily_completion_rate', 0)}%\n"
+                        f"평균 스트릭: {engagement.get('streak_avg', 0)}일"
+                    ),
                     inline=True,
                 )
 
-                most_completed = summary.get("most_completed_category")
-                most_skipped = summary.get("most_skipped_category")
+                flow = engagement.get("flow_distribution", {})
+                if flow:
+                    flow_text = " / ".join(f"{k}: {v}" for k, v in flow.items())
+                    embed.add_field(name="플로우 분포", value=flow_text, inline=True)
+
+                # 퀘스트 분석
+                most_completed = quest.get("most_completed_category")
+                most_skipped = quest.get("most_skipped_category")
                 if most_completed or most_skipped:
                     embed.add_field(
                         name="카테고리",
@@ -72,7 +93,7 @@ class AdminCog(commands.Cog):
                         inline=False,
                     )
 
-                diff_rates = summary.get("difficulty_completion_rates", {})
+                diff_rates = quest.get("difficulty_completion_rates", {})
                 if diff_rates:
                     diff_text = " / ".join(f"{k}: {v}%" for k, v in diff_rates.items())
                     embed.add_field(name="난이도별 완료율", value=diff_text, inline=False)
