@@ -5,7 +5,7 @@ from discord import app_commands
 from core.database import get_session
 from core.onboarding import create_user, is_onboarded, reset_user
 from bot.views.onboarding_views import (
-    CategoryView, TimeBudgetView, EnergyView, DifficultyView,
+    CategoryView, GoalInputView, TimeBudgetView, EnergyView, DifficultyView,
 )
 
 
@@ -28,7 +28,7 @@ class StartCog(commands.Cog):
 
         cat_view = CategoryView()
         await interaction.followup.send(
-            "**Step 1/4** 가장 바꾸고 싶은 영역은?",
+            "**Step 1/5** 가장 바꾸고 싶은 영역은?",
             view=cat_view, ephemeral=True,
         )
         await cat_view.wait()
@@ -37,11 +37,18 @@ class StartCog(commands.Cog):
             session.close()
             return
 
-        goal_text = f"{cat_view.goal_category} 개선하기"
+        # Step 2: 목표 자유 입력 (Modal)
+        goal_button_view = GoalInputView()
+        await interaction.followup.send(
+            f"**Step 2/5** '{cat_view.goal_category}' 영역에서 이루고 싶은 목표는?",
+            view=goal_button_view, ephemeral=True,
+        )
+        await goal_button_view.wait()
+        goal_text = goal_button_view.goal_text or f"{cat_view.goal_category} 개선하기"
 
         time_view = TimeBudgetView()
         await interaction.followup.send(
-            "**Step 2/4** 하루 여유 시간은?",
+            "**Step 3/5** 하루 여유 시간은?",
             view=time_view, ephemeral=True,
         )
         await time_view.wait()
@@ -52,7 +59,7 @@ class StartCog(commands.Cog):
 
         energy_view = EnergyView()
         await interaction.followup.send(
-            "**Step 3/4** 현재 에너지 상태는?",
+            "**Step 4/5** 현재 에너지 상태는?",
             view=energy_view, ephemeral=True,
         )
         await energy_view.wait()
@@ -63,7 +70,7 @@ class StartCog(commands.Cog):
 
         diff_view = DifficultyView()
         await interaction.followup.send(
-            "**Step 4/4** 원하는 플레이 강도는?",
+            "**Step 5/5** 원하는 플레이 강도는?",
             view=diff_view, ephemeral=True,
         )
         await diff_view.wait()

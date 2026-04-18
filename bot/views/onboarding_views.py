@@ -82,6 +82,41 @@ class EnergyView(discord.ui.View):
         self.stop()
 
 
+class GoalTextModal(discord.ui.Modal, title="목표 입력"):
+    goal_input = discord.ui.TextInput(
+        label="이루고 싶은 목표를 입력하세요",
+        placeholder="예: 매일 10분 운동, 수면 패턴 정상화",
+        style=discord.TextStyle.short,
+        required=True,
+        max_length=100,
+    )
+
+    def __init__(self):
+        super().__init__()
+        self.goal_text = None
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.goal_text = self.goal_input.value
+        await interaction.response.send_message(
+            f"목표 설정: '{self.goal_text}'", ephemeral=True
+        )
+        self.stop()
+
+
+class GoalInputView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=300)
+        self.goal_text = None
+
+    @discord.ui.button(label="목표 입력하기", style=discord.ButtonStyle.primary)
+    async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = GoalTextModal()
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+        self.goal_text = modal.goal_text
+        self.stop()
+
+
 class DifficultyView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=300)
