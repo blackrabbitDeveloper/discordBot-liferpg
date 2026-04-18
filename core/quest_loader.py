@@ -21,6 +21,7 @@ def filter_quests(
     category: str | None = None,
     energy: str | None = None,
     time_budget: str | None = None,
+    difficulty: str | None = None,
 ) -> list[dict]:
     pool = []
     if category:
@@ -33,5 +34,14 @@ def filter_quests(
         pool = [q for q in pool if energy in q.get("energy", [])]
     if time_budget:
         pool = [q for q in pool if time_budget in q.get("time_budget", [])]
+
+    if difficulty:
+        DIFFICULTY_ALLOW = {
+            "light": ["easy"],
+            "moderate": ["easy", "normal"],
+            "hard": ["easy", "normal", "hard"],
+        }
+        allowed = DIFFICULTY_ALLOW.get(difficulty, ["easy", "normal", "hard"])
+        pool = [q for q in pool if q.get("difficulty") in allowed]
 
     return pool

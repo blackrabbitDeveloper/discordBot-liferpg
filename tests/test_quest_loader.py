@@ -75,3 +75,15 @@ def test_filter_combined(sample_yaml):
     quests = load_quests(sample_yaml)
     filtered = filter_quests(quests, category="건강", energy="high", time_budget="long")
     assert len(filtered) == 2
+
+
+def test_filter_by_difficulty_light(sample_yaml):
+    quests = load_quests(sample_yaml)
+    filtered = filter_quests(quests, category="건강", difficulty="light")
+    assert all(q["difficulty"] == "easy" for q in filtered)
+
+
+def test_filter_by_difficulty_moderate(sample_yaml):
+    quests = load_quests(sample_yaml)
+    filtered = filter_quests(quests, category="건강", difficulty="moderate")
+    assert all(q["difficulty"] in ("easy", "normal") for q in filtered)

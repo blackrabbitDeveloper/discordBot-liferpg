@@ -48,6 +48,7 @@ def generate_daily_quests(
         category=user.goal_category,
         energy=user.energy_preference,
         time_budget=user.time_budget,
+        difficulty=user.difficulty_preference,
     )
 
     if len(filtered) < 3:
@@ -55,6 +56,7 @@ def generate_daily_quests(
             quest_pool,
             energy=user.energy_preference,
             time_budget=user.time_budget,
+            difficulty=user.difficulty_preference,
         )
         for q in all_filtered:
             if q not in filtered:
