@@ -89,3 +89,15 @@ def test_streak_recovery_clears_protection(db_session, user):
     update_streak(db_session, user, date(2026, 4, 20))
     assert user.streak == 4
     assert user.streak_protected is False
+
+
+def test_streak_resets_after_3_consecutive_misses(db_session, user):
+    user.streak = 10
+    user.streak_protected = True
+    db_session.commit()
+    # 3일 연속 미완료
+    _add_quest(db_session, user, date(2026, 4, 17), "EXPIRED")
+    _add_quest(db_session, user, date(2026, 4, 18), "EXPIRED")
+    _add_quest(db_session, user, date(2026, 4, 19), "EXPIRED")
+    update_streak(db_session, user, date(2026, 4, 19))
+    assert user.streak == 0
