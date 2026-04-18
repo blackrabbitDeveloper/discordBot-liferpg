@@ -10,45 +10,63 @@ from core.time_utils import get_game_date
 
 
 class QuestActionView(discord.ui.View):
-    """Persistent View — 봇 재시작 후에도 작동."""
+    """Persistent View — 봇 재시작 후에도 작동.
+    custom_id에 quest_id를 포함하여 퀘스트별로 구분."""
 
-    def __init__(self):
+    def __init__(self, quest_id: int | None = None):
         super().__init__(timeout=None)
+        qid = quest_id or 0
+        # 동적 custom_id: quest:{quest_id}:{action}
+        self.complete_btn.custom_id = f"quest:{qid}:complete"
+        self.replace_btn.custom_id = f"quest:{qid}:replace"
+        self.skip_btn.custom_id = f"quest:{qid}:skip"
 
-    @discord.ui.button(
-        label="완료했어요", style=discord.ButtonStyle.success,
-        custom_id="quest:complete", emoji="\u2705",
-    )
-    async def complete_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._handle_action(interaction, "complete")
+    @discord.ui.button(label="완료했어요", style=discord.ButtonStyle.success, emoji="\u2705")
+    async def complete_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await _handle_quest_action(interaction, "complete")
 
-    @discord.ui.button(
-        label="다른 걸로", style=discord.ButtonStyle.primary,
-        custom_id="quest:replace", emoji="\U0001f504",
-    )
-    async def replace_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._handle_action(interaction, "replace")
+    @discord.ui.button(label="다른 걸로", style=discord.ButtonStyle.primary, emoji="\U0001f504")
+    async def replace_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await _handle_quest_action(interaction, "replace")
 
-    @discord.ui.button(
-        label="건너뛰기", style=discord.ButtonStyle.secondary,
-        custom_id="quest:skip", emoji="\u23ed\ufe0f",
-    )
-    async def skip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._handle_action(interaction, "skip")
+    @discord.ui.button(label="건너뛰기", style=discord.ButtonStyle.secondary, emoji="\u23ed\ufe0f")
+    async def skip_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await _handle_quest_action(interaction, "skip")
 
-    async def _handle_action(self, interaction: discord.Interaction, action: str):
-        session = get_session()
-        discord_id = str(interaction.user.id)
-        game_date = get_game_date()
 
+async def handle_quest_interaction(bot: discord.Client, interaction: discord.Interaction):
+    """봇의 on_interaction에서 호출. quest:로 시작하는 custom_id를 처리."""
+    custom_id = interaction.data.get("custom_id", "")
+    if not custom_id.startswith("quest:"):
+        return False
+
+    parts = custom_id.split(":")
+    if len(parts) != 3:
+        return False
+
+    _, quest_id_str, action = parts
+    if action not in ("complete", "replace", "skip"):
+        return False
+
+    await _handle_quest_action(interaction, action)
+    return True
+
+
+async def _handle_quest_action(interaction: discord.Interaction, action: str):
+    """퀘스트 버튼 액션 공통 처리."""
+    session = get_session()
+    discord_id = str(interaction.user.id)
+    game_date = get_game_date()
+
+    try:
         user = session.query(User).filter_by(discord_id=discord_id).first()
         if not user:
             await interaction.response.send_message(
                 "`/start`로 먼저 온보딩을 완료해주세요.", ephemeral=True
             )
-            session.close()
             return
 
+        # message_id로 퀘스트 찾기
         message_id = str(interaction.message.id)
         quest = (
             session.query(DailyQuest)
@@ -59,7 +77,13 @@ class QuestActionView(discord.ui.View):
             await interaction.response.send_message(
                 "이 퀘스트를 찾을 수 없어요.", ephemeral=True
             )
-            session.close()
+            return
+
+        # 이중 클릭 방지: 이미 처리된 퀘스트
+        if quest.state != "PENDING":
+            await interaction.response.send_message(
+                "이미 처리된 퀘스트예요.", ephemeral=True
+            )
             return
 
         if action == "complete":
@@ -98,7 +122,9 @@ class QuestActionView(discord.ui.View):
                     value=f"+{new_quest.reward_xp}XP, {new_quest.reward_stat_type} +{new_quest.reward_stat_value}",
                     inline=True,
                 )
-                await interaction.response.edit_message(embed=embed, view=QuestActionView())
+                await interaction.response.edit_message(
+                    embed=embed, view=QuestActionView(new_quest.id)
+                )
             elif result.get("reason") == "no_alternatives":
                 await interaction.response.send_message(
                     "바꿀 수 있는 다른 퀘스트가 없어요.", ephemeral=True
@@ -112,7 +138,7 @@ class QuestActionView(discord.ui.View):
             await interaction.response.edit_message(
                 content=f"~~{quest.title}~~ 건너뜀", view=None
             )
-
+    finally:
         session.close()
 
 
@@ -124,14 +150,16 @@ class LateLogView(discord.ui.View):
     @discord.ui.button(label="기록만 하기", style=discord.ButtonStyle.secondary)
     async def late_log(self, interaction: discord.Interaction, button: discord.ui.Button):
         session = get_session()
-        discord_id = str(interaction.user.id)
-        user = session.query(User).filter_by(discord_id=discord_id).first()
-        if user:
-            late_log_quest(session, user, self.quest_id)
-            await interaction.response.edit_message(
-                content="회고 기록으로 남겼어요.", view=None
-            )
-        session.close()
+        try:
+            discord_id = str(interaction.user.id)
+            user = session.query(User).filter_by(discord_id=discord_id).first()
+            if user:
+                late_log_quest(session, user, self.quest_id)
+                await interaction.response.edit_message(
+                    content="회고 기록으로 남겼어요.", view=None
+                )
+        finally:
+            session.close()
 
     @discord.ui.button(label="오늘 퀘스트 보기", style=discord.ButtonStyle.primary)
     async def today(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -144,7 +172,7 @@ class MorningFlowView(discord.ui.View):
     """아침 메시지: 오늘의 플로우를 선택하는 뷰."""
 
     def __init__(self):
-        super().__init__(timeout=3600)  # 1시간 대기
+        super().__init__(timeout=3600)
         self.choice = None
 
     @discord.ui.button(label="이대로 할래요", style=discord.ButtonStyle.primary, emoji="\u2705")

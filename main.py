@@ -18,6 +18,16 @@ async def on_ready():
     print("Slash commands synced.")
 
 
+@bot.event
+async def on_interaction(interaction: discord.Interaction):
+    """Persistent View의 동적 custom_id를 처리."""
+    if interaction.type == discord.InteractionType.component:
+        from bot.views.quest_views import handle_quest_interaction
+        handled = await handle_quest_interaction(bot, interaction)
+        if handled:
+            return
+
+
 async def setup():
     init_db(DATABASE_URL)
     Base.metadata.create_all(get_engine())

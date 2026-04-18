@@ -15,7 +15,7 @@ class QuestUICog(commands.Cog):
         self.quest_pool = load_quests("data/quests.yaml")
 
     async def cog_load(self):
-        self.bot.add_view(QuestActionView())
+        pass  # 동적 custom_id 사용 → main.py on_interaction에서 처리
 
     async def send_daily_quests(self, user_discord_id: str, skip_flow: bool = False):
         """특정 유저에게 DM으로 오늘 퀘스트를 보낸다.
@@ -127,7 +127,7 @@ class QuestUICog(commands.Cog):
                 inline=True,
             )
 
-            view = QuestActionView()
+            view = QuestActionView(quest_id=quest.id)
             try:
                 msg = await discord_user.send(embed=embed, view=view)
                 quest.message_id = str(msg.id)
