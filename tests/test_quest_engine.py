@@ -7,6 +7,7 @@ from core.quest_engine import (
     generate_daily_quests,
     complete_quest,
     skip_quest,
+    replace_quest,
     expire_pending_quests,
     late_log_quest,
     get_today_quests,
@@ -124,3 +125,37 @@ def test_get_today_quests(db_session, user, sample_quests):
     generate_daily_quests(db_session, user, sample_quests, date(2026, 4, 19))
     today = get_today_quests(db_session, user, date(2026, 4, 19))
     assert len(today) == 3
+
+
+def test_replace_quest(db_session, user, sample_quests):
+    # 후보가 충분하도록 추가
+    sample_quests["건강"].append(
+        {"title": "계단 오르기", "description": "계단 2층", "estimated_minutes": 5,
+         "difficulty": "normal", "energy": ["normal", "high"],
+         "time_budget": ["medium", "long"], "_category": "건강"},
+    )
+    sample_quests["건강"].append(
+        {"title": "팔굽혀펴기", "description": "10회", "estimated_minutes": 3,
+         "difficulty": "easy", "energy": ["normal", "high"],
+         "time_budget": ["short", "medium", "long"], "_category": "건강"},
+    )
+    quests = generate_daily_quests(db_session, user, sample_quests, date(2026, 4, 19))
+    old_title = quests[0].title
+    result = replace_quest(db_session, user, quests[0].id, sample_quests, date(2026, 4, 19))
+    assert result["success"] is True
+    assert result["quest"].title != old_title
+
+
+def test_replace_quest_not_pending(db_session, user, sample_quests):
+    quests = generate_daily_quests(db_session, user, sample_quests, date(2026, 4, 19))
+    complete_quest(db_session, user, quests[0].id, date(2026, 4, 19))
+    result = replace_quest(db_session, user, quests[0].id, sample_quests, date(2026, 4, 19))
+    assert result["success"] is False
+    assert result["reason"] == "not_pending"
+
+
+def test_replace_quest_past_date(db_session, user, sample_quests):
+    quests = generate_daily_quests(db_session, user, sample_quests, date(2026, 4, 18))
+    result = replace_quest(db_session, user, quests[0].id, sample_quests, date(2026, 4, 19))
+    assert result["success"] is False
+    assert result["reason"] == "past_quest"

@@ -8,7 +8,7 @@ from core.onboarding import (
     create_user, is_onboarded, reset_user,
 )
 from core.quest_engine import (
-    generate_daily_quests, complete_quest, skip_quest,
+    generate_daily_quests, complete_quest, skip_quest, replace_quest,
     expire_pending_quests, get_today_quests, late_log_quest,
 )
 from core.quest_loader import load_quests
@@ -79,6 +79,8 @@ class ConsoleAdapter:
                 self._complete(args)
             elif command == "skip":
                 self._skip(args)
+            elif command == "replace":
+                self._replace(args)
             elif command == "status":
                 self._status()
             elif command == "report":
@@ -101,6 +103,7 @@ class ConsoleAdapter:
   quests         오늘 퀘스트 보기
   complete <N>   N번 퀘스트 완료
   skip <N>       N번 퀘스트 건너뛰기
+  replace <N>    N번 퀘스트 다른 걸로 교체
   status         현재 상태 확인
   report         일일 리포트 보기
   weekly         주간 리포트 보기
@@ -247,6 +250,35 @@ class ConsoleAdapter:
 
         skip_quest(self.session, self._user, quest.id)
         print(f"  '{quest.title}' 건너뛰었어요. 괜찮아요, 다른 걸 해봐요.")
+
+    def _replace(self, args):
+        if not self._user:
+            print("먼저 'start'로 온보딩을 완료하세요.")
+            return
+        if not args:
+            print("퀘스트 번호를 입력하세요. 예: replace 1")
+            return
+
+        quests = get_today_quests(self.session, self._user, self.game_date)
+        try:
+            idx = int(args[0]) - 1
+            quest = quests[idx]
+        except (ValueError, IndexError):
+            print("잘못된 번호입니다.")
+            return
+
+        result = replace_quest(
+            self.session, self._user, quest.id, self.quest_pool, self.game_date
+        )
+        if result["success"]:
+            new_q = result["quest"]
+            print(f"\n  퀘스트를 교체했어요!")
+            print(f"  새 퀘스트: {new_q.title} ({new_q.difficulty}, {new_q.estimated_minutes}분)")
+            print(f"  보상: +{new_q.reward_xp}XP, {new_q.reward_stat_type} +{new_q.reward_stat_value}")
+        elif result.get("reason") == "no_alternatives":
+            print("  바꿀 수 있는 다른 퀘스트가 없어요.")
+        elif result.get("reason") == "not_pending":
+            print("  이미 처리된 퀘스트예요.")
 
     def _status(self):
         if not self._user:

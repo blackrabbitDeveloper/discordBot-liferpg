@@ -2,7 +2,8 @@
 import discord
 from core.database import get_session
 from core.models import User, DailyQuest
-from core.quest_engine import complete_quest, skip_quest, late_log_quest
+from core.quest_engine import complete_quest, skip_quest, late_log_quest, replace_quest
+from core.quest_loader import load_quests
 from core.reward_engine import apply_reward
 from core.streak_engine import update_streak
 from core.time_utils import get_game_date
@@ -20,6 +21,13 @@ class QuestActionView(discord.ui.View):
     )
     async def complete_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._handle_action(interaction, "complete")
+
+    @discord.ui.button(
+        label="다른 걸로", style=discord.ButtonStyle.primary,
+        custom_id="quest:replace", emoji="\U0001f504",
+    )
+    async def replace_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._handle_action(interaction, "replace")
 
     @discord.ui.button(
         label="건너뛰기", style=discord.ButtonStyle.secondary,
@@ -72,6 +80,32 @@ class QuestActionView(discord.ui.View):
                     "이 퀘스트는 과거 기록이에요. 회고 기록으로만 남길 수 있어요.",
                     view=LateLogView(quest.id),
                     ephemeral=True,
+                )
+        elif action == "replace":
+            quest_pool = load_quests("data/quests.yaml")
+            result = replace_quest(session, user, quest.id, quest_pool, game_date)
+            if result["success"]:
+                new_quest = result["quest"]
+                embed = discord.Embed(
+                    title=new_quest.title,
+                    description=new_quest.description,
+                    color=discord.Color.blue(),
+                )
+                embed.add_field(name="난이도", value=new_quest.difficulty, inline=True)
+                embed.add_field(name="소요 시간", value=f"{new_quest.estimated_minutes}분", inline=True)
+                embed.add_field(
+                    name="보상",
+                    value=f"+{new_quest.reward_xp}XP, {new_quest.reward_stat_type} +{new_quest.reward_stat_value}",
+                    inline=True,
+                )
+                await interaction.response.edit_message(embed=embed, view=QuestActionView())
+            elif result.get("reason") == "no_alternatives":
+                await interaction.response.send_message(
+                    "바꿀 수 있는 다른 퀘스트가 없어요.", ephemeral=True
+                )
+            elif result.get("reason") == "not_pending":
+                await interaction.response.send_message(
+                    "이미 처리된 퀘스트예요.", ephemeral=True
                 )
         elif action == "skip":
             skip_quest(session, user, quest.id)

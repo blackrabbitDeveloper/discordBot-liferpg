@@ -137,6 +137,63 @@ def expire_pending_quests(session: Session, game_date: date) -> int:
     return len(pending)
 
 
+def replace_quest(
+    session: Session,
+    user: User,
+    quest_id: int,
+    quest_pool: dict[str, list[dict]],
+    game_date: date,
+) -> dict:
+    """PENDING 퀘스트를 다른 퀘스트로 교체. 오늘 날짜만 가능."""
+    quest = session.get(DailyQuest, quest_id)
+    if quest is None:
+        return {"success": False, "reason": "not_found"}
+    if quest.quest_date != game_date:
+        return {"success": False, "reason": "past_quest"}
+    if quest.state != "PENDING":
+        return {"success": False, "reason": "not_pending"}
+
+    # 오늘 이미 있는 퀘스트 제목 수집 (중복 방지)
+    today_quests = get_today_quests(session, user, game_date)
+    existing_titles = {q.title for q in today_quests}
+
+    # 후보 필터링
+    filtered = filter_quests(
+        quest_pool,
+        category=user.goal_category,
+        energy=user.energy_preference,
+        time_budget=user.time_budget,
+    )
+    if len(filtered) < 2:
+        filtered = filter_quests(
+            quest_pool,
+            energy=user.energy_preference,
+            time_budget=user.time_budget,
+        )
+
+    candidates = [q for q in filtered if q["title"] not in existing_titles]
+    if not candidates:
+        return {"success": False, "reason": "no_alternatives"}
+
+    new_q = random.choice(candidates)
+    category = new_q["_category"]
+    stat_type = CATEGORY_STAT_MAP.get(category, "health")
+    reward = DIFFICULTY_REWARDS[new_q["difficulty"]]
+
+    # 기존 퀘스트 업데이트
+    quest.category = category
+    quest.title = new_q["title"]
+    quest.description = new_q["description"]
+    quest.estimated_minutes = new_q["estimated_minutes"]
+    quest.difficulty = new_q["difficulty"]
+    quest.reward_xp = reward["xp"]
+    quest.reward_stat_type = stat_type
+    quest.reward_stat_value = reward["stat"]
+
+    session.commit()
+    return {"success": True, "quest": quest}
+
+
 def late_log_quest(session: Session, user: User, quest_id: int) -> dict:
     quest = session.get(DailyQuest, quest_id)
     if quest is None:
