@@ -52,6 +52,24 @@ categories:
         difficulty: easy
         energy: [low, normal, high]
         time_budget: [short, medium, long]
+      - title: "창밖 바라보기 3분"
+        description: "잠시 화면에서 눈을 떼고 먼 곳을 바라보세요"
+        estimated_minutes: 3
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "따뜻한 차 한 잔"
+        description: "좋아하는 차를 천천히 마셔보세요"
+        estimated_minutes: 5
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
+      - title: "감사한 것 3가지 적기"
+        description: "오늘 감사한 것 3가지를 메모하세요"
+        estimated_minutes: 3
+        difficulty: easy
+        energy: [low, normal, high]
+        time_budget: [short, medium, long]
 
   집중:
     quests:

@@ -215,8 +215,14 @@ def replace_quest(
     if quest.state != "PENDING":
         return {"success": False, "reason": "not_pending"}
 
-    # 오늘 이미 있는 퀘스트 제목 수집 (중복 방지)
+    MAX_REPLACE_PER_DAY = 3
+    # 오늘 해당 유저의 전체 교체 횟수 확인
     today_quests = get_today_quests(session, user, game_date)
+    total_replaces = sum(q.replace_count for q in today_quests)
+    if total_replaces >= MAX_REPLACE_PER_DAY:
+        return {"success": False, "reason": "replace_limit"}
+
+    # 오늘 이미 있는 퀘스트 제목 수집 (중복 방지)
     existing_titles = {q.title for q in today_quests}
 
     # 후보 필터링
@@ -225,12 +231,14 @@ def replace_quest(
         category=user.goal_category,
         energy=user.energy_preference,
         time_budget=user.time_budget,
+        difficulty=user.difficulty_preference,
     )
     if len(filtered) < 2:
         filtered = filter_quests(
             quest_pool,
             energy=user.energy_preference,
             time_budget=user.time_budget,
+            difficulty=user.difficulty_preference,
         )
 
     candidates = [q for q in filtered if q["title"] not in existing_titles]
@@ -251,6 +259,7 @@ def replace_quest(
     quest.reward_xp = reward["xp"]
     quest.reward_stat_type = stat_type
     quest.reward_stat_value = reward["stat"]
+    quest.replace_count += 1
 
     session.commit()
     return {"success": True, "quest": quest}

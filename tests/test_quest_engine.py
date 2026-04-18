@@ -187,6 +187,24 @@ def test_complete_quest_already_completed(db_session, user, sample_quests):
     assert result["reason"] == "already_processed"
 
 
+def test_replace_quest_limit(db_session, user, sample_quests):
+    sample_quests["건강"].extend([
+        {"title": f"추가{i}", "description": "", "estimated_minutes": 5,
+         "difficulty": "easy", "energy": ["normal", "high"],
+         "time_budget": ["medium", "long"], "_category": "건강"}
+        for i in range(10)
+    ])
+    quests = generate_daily_quests(db_session, user, sample_quests, date(2026, 4, 19))
+    # 3번 교체 성공
+    for i in range(3):
+        result = replace_quest(db_session, user, quests[0].id, sample_quests, date(2026, 4, 19))
+        assert result["success"] is True
+    # 4번째 교체 실패
+    result = replace_quest(db_session, user, quests[0].id, sample_quests, date(2026, 4, 19))
+    assert result["success"] is False
+    assert result["reason"] == "replace_limit"
+
+
 def test_low_completion_rate_favors_easy(db_session, user, sample_quests):
     # 최근 3일: 9개 중 3개만 완료 (33%)
     for day_offset in range(1, 4):
