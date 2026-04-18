@@ -20,10 +20,7 @@ class CategorySelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         self.view.goal_category = self.values[0]
-        await interaction.response.send_message(
-            f"'{self.values[0]}' 선택! 이 영역에서 이루고 싶은 목표를 입력해주세요.",
-            ephemeral=True,
-        )
+        await interaction.response.defer()
         self.view.stop()
 
 
@@ -97,9 +94,7 @@ class GoalTextModal(discord.ui.Modal, title="목표 입력"):
 
     async def on_submit(self, interaction: discord.Interaction):
         self.goal_text = self.goal_input.value
-        await interaction.response.send_message(
-            f"목표 설정: '{self.goal_text}'", ephemeral=True
-        )
+        await interaction.response.defer()
         self.stop()
 
 

@@ -1,5 +1,4 @@
 # bot/cogs/start.py
-import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -15,16 +14,6 @@ ENERGY_LABELS = {"low": "낮음", "normal": "보통", "high": "높음"}
 DIFF_LABELS = {"light": "아주 가볍게", "moderate": "적당히", "hard": "조금 빡세게"}
 
 
-async def _close_step(msg, step: str, value: str):
-    """완료된 단계 메시지를 결과 표시 후 삭제."""
-    try:
-        await msg.edit(content=f"{step} **{value}**", view=None)
-        await asyncio.sleep(2)
-        await msg.delete()
-    except Exception:
-        pass
-
-
 class StartCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -36,6 +25,7 @@ class StartCog(commands.Cog):
             discord_id = str(interaction.user.id)
             log_activity(session, "onboarding_start", "onboarding", detail={"discord_id": discord_id})
 
+            # 기존 유저 리셋 확인
             if is_onboarded(session, discord_id):
                 confirm_view = ResetConfirmView()
                 await interaction.response.send_message(
@@ -43,84 +33,75 @@ class StartCog(commands.Cog):
                     view=confirm_view, ephemeral=True,
                 )
                 await confirm_view.wait()
-                # 확인 메시지 정리 후 삭제
-                try:
-                    if confirm_view.confirmed:
-                        await interaction.edit_original_response(content="다시 시작합니다!", view=None)
-                    else:
-                        await interaction.edit_original_response(content="취소했어요. 기존 진행이 유지됩니다.", view=None)
-                    await asyncio.sleep(2)
-                    await interaction.delete_original_response()
-                except Exception:
-                    pass
-
                 if not confirm_view.confirmed:
+                    await interaction.edit_original_response(
+                        content="취소했어요. 기존 진행이 유지됩니다.", view=None
+                    )
                     return
                 reset_user(session, discord_id)
-                await interaction.followup.send("모험을 시작할게요! 몇 가지 질문에 답해주세요.", ephemeral=True)
-            else:
-                await interaction.response.send_message(
-                    "모험을 시작할게요! 몇 가지 질문에 답해주세요.",
-                    ephemeral=True,
+                # 리셋 확인 메시지를 Step 1로 전환
+                cat_view = CategoryView()
+                await interaction.edit_original_response(
+                    content="**Step 1/5** 가장 바꾸고 싶은 영역은?",
+                    view=cat_view,
                 )
+                step_msg = await interaction.original_response()
+            else:
+                # 새 유저: 첫 메시지가 곧 Step 1
+                cat_view = CategoryView()
+                await interaction.response.send_message(
+                    "**Step 1/5** 가장 바꾸고 싶은 영역은?",
+                    view=cat_view, ephemeral=True,
+                )
+                step_msg = await interaction.original_response()
 
             # Step 1: 카테고리
-            cat_view = CategoryView()
-            step1_msg = await interaction.followup.send(
-                "**Step 1/5** 가장 바꾸고 싶은 영역은?",
-                view=cat_view, ephemeral=True, wait=True,
-            )
             await cat_view.wait()
             if cat_view.goal_category is None:
-                await interaction.followup.send("시간 초과! `/start`로 다시 시작해주세요.", ephemeral=True)
+                await step_msg.edit(content="시간 초과! `/start`로 다시 시작해주세요.", view=None)
                 return
-            await _close_step(step1_msg, "Step 1/5 완료:", cat_view.goal_category)
 
             # Step 2: 목표 자유 입력
-            goal_button_view = GoalInputView()
-            step2_msg = await interaction.followup.send(
-                f"**Step 2/5** '{cat_view.goal_category}' 영역에서 이루고 싶은 목표는?",
-                view=goal_button_view, ephemeral=True, wait=True,
+            goal_view = GoalInputView()
+            await step_msg.edit(
+                content=f"**Step 2/5** '{cat_view.goal_category}' 영역에서 이루고 싶은 목표는?",
+                view=goal_view,
             )
-            await goal_button_view.wait()
-            goal_text = goal_button_view.goal_text or f"{cat_view.goal_category} 개선하기"
-            await _close_step(step2_msg, "Step 2/5 완료:", goal_text)
+            await goal_view.wait()
+            goal_text = goal_view.goal_text or f"{cat_view.goal_category} 개선하기"
 
             # Step 3: 시간
             time_view = TimeBudgetView()
-            step3_msg = await interaction.followup.send(
-                "**Step 3/5** 하루 여유 시간은?",
-                view=time_view, ephemeral=True, wait=True,
+            await step_msg.edit(
+                content="**Step 3/5** 하루 여유 시간은?",
+                view=time_view,
             )
             await time_view.wait()
             if time_view.time_budget is None:
-                await interaction.followup.send("시간 초과! `/start`로 다시 시작해주세요.", ephemeral=True)
+                await step_msg.edit(content="시간 초과! `/start`로 다시 시작해주세요.", view=None)
                 return
-            await _close_step(step3_msg, "Step 3/5 완료:", TIME_LABELS.get(time_view.time_budget, time_view.time_budget))
 
             # Step 4: 에너지
             energy_view = EnergyView()
-            step4_msg = await interaction.followup.send(
-                "**Step 4/5** 현재 에너지 상태는?",
-                view=energy_view, ephemeral=True, wait=True,
+            await step_msg.edit(
+                content="**Step 4/5** 현재 에너지 상태는?",
+                view=energy_view,
             )
             await energy_view.wait()
             if energy_view.energy is None:
-                await interaction.followup.send("시간 초과! `/start`로 다시 시작해주세요.", ephemeral=True)
+                await step_msg.edit(content="시간 초과! `/start`로 다시 시작해주세요.", view=None)
                 return
-            await _close_step(step4_msg, "Step 4/5 완료:", ENERGY_LABELS.get(energy_view.energy, energy_view.energy))
 
             # Step 5: 난이도
             diff_view = DifficultyView()
-            step5_msg = await interaction.followup.send(
-                "**Step 5/5** 원하는 플레이 강도는?",
-                view=diff_view, ephemeral=True, wait=True,
+            await step_msg.edit(
+                content="**Step 5/5** 원하는 플레이 강도는?",
+                view=diff_view,
             )
             await diff_view.wait()
             if diff_view.difficulty is None:
-                await interaction.followup.send("시간 초과! `/start`로 다시 시작해주세요.", ephemeral=True)
+                await step_msg.edit(content="시간 초과! `/start`로 다시 시작해주세요.", view=None)
                 return
-            await _close_step(step5_msg, "Step 5/5 완료:", DIFF_LABELS.get(diff_view.difficulty, diff_view.difficulty))
 
             # 유저 생성
             user = create_user(
@@ -134,15 +115,19 @@ class StartCog(commands.Cog):
                 difficulty_preference=diff_view.difficulty,
             )
 
+            # 완료 Embed로 최종 편집
             embed = discord.Embed(
                 title="온보딩 완료!",
                 description=f"Lv.{user.level} {user.nickname}으로 모험을 시작합니다!",
                 color=discord.Color.green(),
             )
-            embed.add_field(name="목표", value=f"{user.goal_category}: {user.goal_text}")
+            embed.add_field(name="목표", value=f"{user.goal_category}: {user.goal_text}", inline=False)
+            embed.add_field(name="시간", value=TIME_LABELS.get(user.time_budget, ""), inline=True)
+            embed.add_field(name="에너지", value=ENERGY_LABELS.get(user.energy_preference, ""), inline=True)
+            embed.add_field(name="강도", value=DIFF_LABELS.get(user.difficulty_preference, ""), inline=True)
             embed.set_footer(text="첫 퀘스트를 보내드릴게요!")
 
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await step_msg.edit(content=None, embed=embed, view=None)
         finally:
             session.close()
 
