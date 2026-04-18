@@ -22,6 +22,11 @@ async def setup():
     init_db(DATABASE_URL)
     Base.metadata.create_all(get_engine())
     await bot.load_extension("bot.cogs.start")
+    await bot.load_extension("bot.cogs.quest_ui")
+    await bot.load_extension("bot.cogs.status")
+    await bot.load_extension("bot.cogs.goal")
+    await bot.load_extension("bot.cogs.pause")
+    await bot.load_extension("bot.scheduler")
 
 
 def main():
