@@ -138,3 +138,35 @@ class LateLogView(discord.ui.View):
         await interaction.response.edit_message(
             content="곧 오늘 퀘스트가 도착할 거예요!", view=None
         )
+
+
+class MorningFlowView(discord.ui.View):
+    """아침 메시지: 오늘의 플로우를 선택하는 뷰."""
+
+    def __init__(self):
+        super().__init__(timeout=3600)  # 1시간 대기
+        self.choice = None
+
+    @discord.ui.button(label="이대로 할래요", style=discord.ButtonStyle.primary, emoji="\u2705")
+    async def normal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.choice = "normal"
+        await interaction.response.defer()
+        self.stop()
+
+    @discord.ui.button(label="오늘은 가볍게", style=discord.ButtonStyle.secondary, emoji="\U0001f33f")
+    async def light(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.choice = "light"
+        await interaction.response.defer()
+        self.stop()
+
+    @discord.ui.button(label="회복 모드", style=discord.ButtonStyle.secondary, emoji="\U0001f49a")
+    async def recovery(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.choice = "recovery"
+        await interaction.response.defer()
+        self.stop()
+
+    @discord.ui.button(label="오늘은 쉬어갈래요", style=discord.ButtonStyle.secondary, emoji="\U0001f634")
+    async def rest(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.choice = "rest"
+        await interaction.response.defer()
+        self.stop()

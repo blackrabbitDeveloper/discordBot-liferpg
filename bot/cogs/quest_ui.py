@@ -6,7 +6,7 @@ from core.models import User
 from core.quest_engine import generate_daily_quests, get_today_quests
 from core.quest_loader import load_quests
 from core.time_utils import get_game_date
-from bot.views.quest_views import QuestActionView
+from bot.views.quest_views import QuestActionView, MorningFlowView
 
 
 class QuestUICog(commands.Cog):
@@ -17,7 +17,10 @@ class QuestUICog(commands.Cog):
     async def cog_load(self):
         self.bot.add_view(QuestActionView())
 
-    async def send_daily_quests(self, user_discord_id: str):
+    async def send_daily_quests(self, user_discord_id: str, skip_flow: bool = False):
+        """특정 유저에게 DM으로 오늘 퀘스트를 보낸다.
+        skip_flow=True면 플로우 선택 없이 바로 퀘스트 발송 (온보딩 직후 등).
+        """
         session = get_session()
         user = session.query(User).filter_by(discord_id=user_discord_id).first()
         if not user or user.status != "active":
@@ -25,13 +28,86 @@ class QuestUICog(commands.Cog):
             return
 
         game_date = get_game_date()
-        quests = get_today_quests(session, user, game_date)
-        if not quests:
-            quests = generate_daily_quests(session, user, self.quest_pool, game_date)
 
-        discord_user = await self.bot.fetch_user(int(user_discord_id))
-        if not discord_user:
+        # 이미 오늘 퀘스트가 있으면 발송만
+        existing = get_today_quests(session, user, game_date)
+        if existing:
+            await self._send_quest_dms(user_discord_id, existing, session)
             session.close()
+            return
+
+        try:
+            discord_user = await self.bot.fetch_user(int(user_discord_id))
+        except Exception:
+            session.close()
+            return
+
+        energy_override = None
+        category_override = None
+
+        if not skip_flow:
+            # 아침 플로우 선택 메시지
+            embed = discord.Embed(
+                title="좋은 아침이에요!",
+                description="오늘은 어떤 흐름으로 가볼까요?",
+                color=discord.Color.blue(),
+            )
+            flow_view = MorningFlowView()
+            try:
+                flow_msg = await discord_user.send(embed=embed, view=flow_view)
+            except discord.Forbidden:
+                session.close()
+                return
+
+            await flow_view.wait()
+
+            if flow_view.choice == "rest":
+                await discord_user.send("오늘은 쉬어가는 턴이에요. 내일 다시 이어가면 됩니다. 푹 쉬세요!")
+                session.close()
+                return
+            elif flow_view.choice == "light":
+                energy_override = "low"
+            elif flow_view.choice == "recovery":
+                category_override = "회복"
+                energy_override = "low"
+            elif flow_view.choice is None:
+                # 타임아웃: 기본값으로 진행
+                pass
+
+            # 플로우 메시지 정리 (버튼 제거)
+            try:
+                choice_text = {
+                    "normal": "이대로 할래요",
+                    "light": "오늘은 가볍게",
+                    "recovery": "회복 모드",
+                    None: "기본 모드 (자동)",
+                }.get(flow_view.choice, "이대로 할래요")
+                await flow_msg.edit(
+                    embed=discord.Embed(
+                        title="좋은 아침이에요!",
+                        description=f"오늘의 선택: **{choice_text}**",
+                        color=discord.Color.green(),
+                    ),
+                    view=None,
+                )
+            except Exception:
+                pass
+
+        # 퀘스트 생성
+        quests = generate_daily_quests(
+            session, user, self.quest_pool, game_date,
+            energy_override=energy_override,
+            category_override=category_override,
+        )
+
+        await self._send_quest_dms(user_discord_id, quests, session)
+        session.close()
+
+    async def _send_quest_dms(self, user_discord_id: str, quests: list, session):
+        """퀘스트를 개별 DM으로 발송."""
+        try:
+            discord_user = await self.bot.fetch_user(int(user_discord_id))
+        except Exception:
             return
 
         for quest in quests:
@@ -52,11 +128,13 @@ class QuestUICog(commands.Cog):
             )
 
             view = QuestActionView()
-            msg = await discord_user.send(embed=embed, view=view)
-            quest.message_id = str(msg.id)
+            try:
+                msg = await discord_user.send(embed=embed, view=view)
+                quest.message_id = str(msg.id)
+            except discord.Forbidden:
+                pass
 
         session.commit()
-        session.close()
 
 
 async def setup(bot: commands.Bot):

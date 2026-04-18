@@ -183,8 +183,30 @@ class ConsoleAdapter:
 
         quests = get_today_quests(self.session, self._user, self.game_date)
         if not quests:
+            # 오늘 플로우 선택
+            print("\n오늘은 어떤 흐름으로 가볼까요?")
+            print("  1. 이대로 할래요")
+            print("  2. 오늘은 가볍게")
+            print("  3. 회복 모드")
+            print("  4. 오늘은 쉬어갈래요")
+            choice = self._get_choice(4)
+
+            if choice == 4:
+                print("\n오늘은 쉬어가는 턴이에요. 내일 다시 이어가면 됩니다.")
+                return
+
+            energy_override = None
+            category_override = None
+            if choice == 2:
+                energy_override = "low"
+            elif choice == 3:
+                category_override = "회복"
+                energy_override = "low"
+
             quests = generate_daily_quests(
-                self.session, self._user, self.quest_pool, self.game_date
+                self.session, self._user, self.quest_pool, self.game_date,
+                energy_override=energy_override,
+                category_override=category_override,
             )
 
         print(f"\n오늘의 퀘스트 ({self.game_date})")
@@ -195,7 +217,7 @@ class ConsoleAdapter:
             print(f"  [{icon}] {i}. {q.title} ({q.difficulty}, {q.estimated_minutes}분)")
             print(f"      보상: +{q.reward_xp}XP, {q.reward_stat_type} +{q.reward_stat_value}")
         print("-" * 40)
-        print("  'complete N' 또는 'skip N'으로 처리하세요")
+        print("  'complete N', 'skip N', 'replace N'으로 처리하세요")
 
     def _complete(self, args):
         if not self._user:

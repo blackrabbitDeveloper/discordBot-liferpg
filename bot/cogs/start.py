@@ -5,7 +5,7 @@ from discord import app_commands
 from core.database import get_session
 from core.onboarding import create_user, is_onboarded, reset_user
 from bot.views.onboarding_views import (
-    CategoryView, GoalInputView, TimeBudgetView, EnergyView, DifficultyView,
+    CategoryView, GoalInputView, TimeBudgetView, EnergyView, DifficultyView, ResetConfirmView,
 )
 
 
@@ -19,12 +19,23 @@ class StartCog(commands.Cog):
         discord_id = str(interaction.user.id)
 
         if is_onboarded(session, discord_id):
+            confirm_view = ResetConfirmView()
+            await interaction.response.send_message(
+                "이미 진행 중인 데이터가 있어요. 처음부터 다시 시작하면 **모든 진행이 초기화**됩니다.\n정말 다시 시작할까요?",
+                view=confirm_view, ephemeral=True,
+            )
+            await confirm_view.wait()
+            if not confirm_view.confirmed:
+                await interaction.followup.send("취소했어요. 기존 진행이 유지됩니다.", ephemeral=True)
+                session.close()
+                return
             reset_user(session, discord_id)
-
-        await interaction.response.send_message(
-            "모험을 시작할게요! 몇 가지 질문에 답해주세요.",
-            ephemeral=True,
-        )
+            await interaction.followup.send("모험을 시작할게요! 몇 가지 질문에 답해주세요.", ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                "모험을 시작할게요! 몇 가지 질문에 답해주세요.",
+                ephemeral=True,
+            )
 
         cat_view = CategoryView()
         await interaction.followup.send(
@@ -104,7 +115,7 @@ class StartCog(commands.Cog):
         # 온보딩 직후 첫 퀘스트 DM 발송
         quest_cog = self.bot.get_cog("QuestUICog")
         if quest_cog:
-            await quest_cog.send_daily_quests(discord_id)
+            await quest_cog.send_daily_quests(discord_id, skip_flow=True)
 
 
 async def setup(bot: commands.Bot):

@@ -34,6 +34,8 @@ def generate_daily_quests(
     user: User,
     quest_pool: dict[str, list[dict]],
     game_date: date,
+    energy_override: str | None = None,
+    category_override: str | None = None,
 ) -> list[DailyQuest]:
     existing = (
         session.query(DailyQuest)
@@ -43,20 +45,28 @@ def generate_daily_quests(
     if existing:
         return existing
 
+    energy = energy_override or user.energy_preference
+    category = category_override or user.goal_category
+
+    if energy_override == "low":
+        difficulty = "light"
+    else:
+        difficulty = user.difficulty_preference
+
     filtered = filter_quests(
         quest_pool,
-        category=user.goal_category,
-        energy=user.energy_preference,
+        category=category,
+        energy=energy,
         time_budget=user.time_budget,
-        difficulty=user.difficulty_preference,
+        difficulty=difficulty,
     )
 
     if len(filtered) < 3:
         all_filtered = filter_quests(
             quest_pool,
-            energy=user.energy_preference,
+            energy=energy,
             time_budget=user.time_budget,
-            difficulty=user.difficulty_preference,
+            difficulty=difficulty,
         )
         for q in all_filtered:
             if q not in filtered:
