@@ -37,6 +37,7 @@ async def setup():
     await bot.load_extension("bot.cogs.goal")
     await bot.load_extension("bot.cogs.pause")
     await bot.load_extension("bot.scheduler")
+    await bot.load_extension("bot.cogs.admin")
 
 
 def main():
