@@ -1,4 +1,5 @@
 # bot/views/quest_views.py
+import asyncio
 import discord
 from core.database import get_session
 from core.models import User, DailyQuest
@@ -95,10 +96,15 @@ async def _handle_quest_action(interaction: discord.Interaction, action: str):
                 if reward["leveled_up"]:
                     msg += f"\n레벨 업! Lv.{reward['new_level']}!"
                 msg += f"\n스트릭: {user.streak}일"
+                # 결과 표시 후 3초 뒤 메시지 삭제
                 await interaction.response.edit_message(
-                    content=f"~~{quest.title}~~ **완료!**", view=None
+                    content=f"**{quest.title}** 완료!\n{msg}", embed=None, view=None
                 )
-                await interaction.followup.send(msg, ephemeral=True)
+                await asyncio.sleep(3)
+                try:
+                    await interaction.message.delete()
+                except Exception:
+                    pass
             elif result.get("reason") == "past_quest":
                 await interaction.response.send_message(
                     "이 퀘스트는 과거 기록이에요. 회고 기록으로만 남길 수 있어요.",
@@ -140,8 +146,14 @@ async def _handle_quest_action(interaction: discord.Interaction, action: str):
         elif action == "skip":
             skip_quest(session, user, quest.id)
             await interaction.response.edit_message(
-                content=f"~~{quest.title}~~ 건너뜀", view=None
+                content=f"**{quest.title}** 건너뜀", embed=None, view=None
             )
+            import asyncio
+            await asyncio.sleep(3)
+            try:
+                await interaction.message.delete()
+            except Exception:
+                pass
     finally:
         session.close()
 
