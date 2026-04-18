@@ -7,6 +7,15 @@ from core.models import User, DailyQuest, DailyReport, WeeklyReport
 def generate_daily_report(
     session: Session, user: User, report_date: date
 ) -> DailyReport:
+    # 중복 체크
+    existing = (
+        session.query(DailyReport)
+        .filter_by(user_id=user.id, report_date=report_date)
+        .first()
+    )
+    if existing:
+        return existing
+
     quests = (
         session.query(DailyQuest)
         .filter(DailyQuest.user_id == user.id, DailyQuest.quest_date == report_date)
@@ -53,6 +62,15 @@ def generate_weekly_report(
     week_start: date,
     week_end: date,
 ) -> WeeklyReport:
+    # 중복 체크
+    existing = (
+        session.query(WeeklyReport)
+        .filter_by(user_id=user.id, week_start=week_start, week_end=week_end)
+        .first()
+    )
+    if existing:
+        return existing
+
     quests = (
         session.query(DailyQuest)
         .filter(
@@ -74,10 +92,12 @@ def generate_weekly_report(
 
     best_stat = max(stat_gains, key=stat_gains.get) if stat_gains else None
 
+    WEEKDAY_KR = {0: "월요일", 1: "화요일", 2: "수요일", 3: "목요일", 4: "금요일", 5: "토요일", 6: "일요일"}
+
     expired_days = Counter()
     for q in quests:
         if q.state in ("EXPIRED", "SKIPPED"):
-            expired_days[q.quest_date.strftime("%A")] += 1
+            expired_days[WEEKDAY_KR[q.quest_date.weekday()]] += 1
 
     risk_pattern = None
     if expired_days:

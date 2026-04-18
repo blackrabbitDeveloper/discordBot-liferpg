@@ -93,3 +93,19 @@ def test_weekly_report_saved_to_db(db_session, user):
 
     saved = db_session.query(WeeklyReport).filter_by(user_id=user.id).first()
     assert saved is not None
+
+
+def test_daily_report_no_duplicate(db_session, user):
+    _add_quest(db_session, user, date(2026, 4, 19), "COMPLETED")
+    report1 = generate_daily_report(db_session, user, date(2026, 4, 19))
+    report2 = generate_daily_report(db_session, user, date(2026, 4, 19))
+    assert report1.id == report2.id  # 같은 리포트 반환
+    count = db_session.query(DailyReport).filter_by(user_id=user.id, report_date=date(2026, 4, 19)).count()
+    assert count == 1
+
+
+def test_weekly_report_no_duplicate(db_session, user):
+    _add_quest(db_session, user, date(2026, 4, 13), "COMPLETED")
+    report1 = generate_weekly_report(db_session, user, date(2026, 4, 13), date(2026, 4, 19))
+    report2 = generate_weekly_report(db_session, user, date(2026, 4, 13), date(2026, 4, 19))
+    assert report1.id == report2.id
