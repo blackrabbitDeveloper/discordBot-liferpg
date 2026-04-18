@@ -4,7 +4,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/life_rpg.db")
+
+# Railway PostgreSQL은 postgres:// 로 줄 수 있음 → postgresql:// 로 변환
+_db_url = os.getenv("DATABASE_URL", "sqlite:///data/life_rpg.db")
+if _db_url.startswith("postgres://"):
+    _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+DATABASE_URL = _db_url
 
 DAY_BOUNDARY_HOUR = 4
 MORNING_QUEST_HOUR = 8
