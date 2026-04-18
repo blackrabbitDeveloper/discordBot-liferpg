@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from core.models import User, UserStats
+from core.models import User, UserStats, DailyQuest, QuestLog, DailyReport, WeeklyReport
 
 GOAL_CATEGORIES = ["건강", "집중", "일/커리어", "공부", "창작", "돈관리", "정리/생활"]
 
@@ -81,8 +81,10 @@ def reset_user(session: Session, discord_id: str) -> bool:
     user = session.query(User).filter_by(discord_id=discord_id).first()
     if not user:
         return False
-    if user.stats:
-        session.delete(user.stats)
-    session.delete(user)
+    # Delete related records that aren't cascade-covered
+    session.query(QuestLog).filter_by(user_id=user.id).delete()
+    session.query(DailyReport).filter_by(user_id=user.id).delete()
+    session.query(WeeklyReport).filter_by(user_id=user.id).delete()
+    session.delete(user)  # cascade handles UserStats + DailyQuest
     session.commit()
     return True

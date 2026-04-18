@@ -30,8 +30,8 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    stats = relationship("UserStats", uselist=False, back_populates="user")
-    quests = relationship("DailyQuest", back_populates="user")
+    stats = relationship("UserStats", uselist=False, back_populates="user", cascade="all, delete-orphan")
+    quests = relationship("DailyQuest", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserStats(Base):

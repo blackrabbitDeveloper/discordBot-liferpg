@@ -139,3 +139,21 @@ class DifficultyView(discord.ui.View):
         self.difficulty = "hard"
         await interaction.response.defer()
         self.stop()
+
+
+class ResetConfirmView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=60)
+        self.confirmed = False
+
+    @discord.ui.button(label="다시 시작", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.confirmed = True
+        await interaction.response.defer()
+        self.stop()
+
+    @discord.ui.button(label="취소", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.confirmed = False
+        await interaction.response.defer()
+        self.stop()
