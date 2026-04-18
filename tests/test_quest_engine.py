@@ -162,7 +162,7 @@ def test_replace_quest_past_date(db_session, user, sample_quests):
 
 
 def test_generate_excludes_recent_completed(db_session, user, sample_quests):
-    # 어제 퀘스트 완료
+    # 어제 퀨스트 완료
     yesterday_quest = DailyQuest(
         user_id=user.id, quest_date=date(2026, 4, 18),
         category="건강", title="물 마시기", description="물 한 잔",
@@ -177,3 +177,25 @@ def test_generate_excludes_recent_completed(db_session, user, sample_quests):
     quests = generate_daily_quests(db_session, user, sample_quests, date(2026, 4, 19))
     titles = [q.title for q in quests]
     assert "물 마시기" not in titles
+
+
+def test_low_completion_rate_favors_easy(db_session, user, sample_quests):
+    # 최근 3일: 9개 중 3개만 완료 (33%)
+    for day_offset in range(1, 4):
+        d = date(2026, 4, 19 - day_offset)
+        for i in range(3):
+            state = "COMPLETED" if i == 0 else "EXPIRED"
+            q = DailyQuest(
+                user_id=user.id, quest_date=d, category="건강",
+                title=f"테스트{day_offset}_{i}", description="",
+                estimated_minutes=5, difficulty="normal",
+                reward_xp=10, reward_stat_type="health",
+                reward_stat_value=2, state=state,
+            )
+            db_session.add(q)
+    db_session.commit()
+
+    quests = generate_daily_quests(db_session, user, sample_quests, date(2026, 4, 19))
+    # 완료율 33% < 50% → easy 퀘스트 위주
+    difficulties = [q.difficulty for q in quests]
+    assert difficulties.count("easy") >= 2  # 대부분 easy여야 함
