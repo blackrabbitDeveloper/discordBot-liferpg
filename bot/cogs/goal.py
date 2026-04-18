@@ -26,29 +26,30 @@ class GoalCog(commands.Cog):
         text: str | None = None,
     ):
         session = get_session()
-        user = session.query(User).filter_by(
-            discord_id=str(interaction.user.id)
-        ).first()
+        try:
+            user = session.query(User).filter_by(
+                discord_id=str(interaction.user.id)
+            ).first()
 
-        if not user:
+            if not user:
+                await interaction.response.send_message(
+                    "`/start`로 먼저 시작해주세요.", ephemeral=True
+                )
+                return
+
+            user.goal_category = category.value
+            if text:
+                user.goal_text = text
+            else:
+                user.goal_text = f"{category.value} 개선하기"
+            session.commit()
+
             await interaction.response.send_message(
-                "`/start`로 먼저 시작해주세요.", ephemeral=True
+                f"목표가 변경되었어요! → {user.goal_category}: {user.goal_text}",
+                ephemeral=True,
             )
+        finally:
             session.close()
-            return
-
-        user.goal_category = category.value
-        if text:
-            user.goal_text = text
-        else:
-            user.goal_text = f"{category.value} 개선하기"
-        session.commit()
-
-        await interaction.response.send_message(
-            f"목표가 변경되었어요! → {user.goal_category}: {user.goal_text}",
-            ephemeral=True,
-        )
-        session.close()
 
 
 async def setup(bot: commands.Bot):
