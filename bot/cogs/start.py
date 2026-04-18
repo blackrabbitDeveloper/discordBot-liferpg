@@ -89,10 +89,15 @@ class StartCog(commands.Cog):
             color=discord.Color.green(),
         )
         embed.add_field(name="목표", value=f"{user.goal_category}: {user.goal_text}")
-        embed.set_footer(text="곧 첫 퀘스트가 도착할 거예요!")
+        embed.set_footer(text="첫 퀘스트를 보내드릴게요!")
 
         await interaction.followup.send(embed=embed, ephemeral=True)
         session.close()
+
+        # 온보딩 직후 첫 퀘스트 DM 발송
+        quest_cog = self.bot.get_cog("QuestUICog")
+        if quest_cog:
+            await quest_cog.send_daily_quests(discord_id)
 
 
 async def setup(bot: commands.Bot):
