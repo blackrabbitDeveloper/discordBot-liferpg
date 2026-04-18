@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from core.models import User
 from config import DIFFICULTY_REWARDS
+from core.activity_logger import log_activity
 
 
 def check_level_up(xp: int, level: int) -> tuple[bool, int, int]:
@@ -30,6 +31,11 @@ def apply_reward(
         user.xp = remaining_xp
 
     session.commit()
+
+    if leveled_up:
+        log_activity(session, "level_up", "growth", user_id=user.id, detail={
+            "new_level": new_level, "total_xp": user.xp,
+        })
 
     return {
         "xp_gained": xp_gained,

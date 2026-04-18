@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from core.models import User, UserStats, DailyQuest, QuestLog, DailyReport, WeeklyReport
+from core.activity_logger import log_activity
 
 GOAL_CATEGORIES = ["건강", "집중", "일/커리어", "공부", "창작", "돈관리", "정리/생활"]
 
@@ -74,6 +75,14 @@ def create_user(
     session.add(stats)
     session.commit()
 
+    log_activity(session, "onboarding_complete", "onboarding", user_id=user.id, detail={
+        "goal_category": goal_category,
+        "goal_text": goal_text,
+        "time_budget": time_budget,
+        "energy_preference": energy_preference,
+        "difficulty_preference": difficulty_preference,
+    })
+
     return user
 
 
@@ -81,6 +90,11 @@ def reset_user(session: Session, discord_id: str) -> bool:
     user = session.query(User).filter_by(discord_id=discord_id).first()
     if not user:
         return False
+    log_activity(session, "onboarding_reset", "onboarding", user_id=None, detail={
+        "discord_id": discord_id,
+        "prev_level": user.level,
+        "prev_streak": user.streak,
+    })
     # QuestLog는 DailyQuest cascade로 자동 삭제
     # DailyReport, WeeklyReport는 User cascade로 자동 삭제
     session.delete(user)

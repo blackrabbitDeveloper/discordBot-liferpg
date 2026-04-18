@@ -4,6 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 from core.database import get_session
 from core.onboarding import create_user, is_onboarded, reset_user
+from core.activity_logger import log_activity
 from bot.views.onboarding_views import (
     CategoryView, GoalInputView, TimeBudgetView, EnergyView, DifficultyView, ResetConfirmView,
 )
@@ -18,6 +19,7 @@ class StartCog(commands.Cog):
         session = get_session()
         try:
             discord_id = str(interaction.user.id)
+            log_activity(session, "onboarding_start", "onboarding", detail={"discord_id": discord_id})
 
             if is_onboarded(session, discord_id):
                 confirm_view = ResetConfirmView()

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from core.models import User, DailyQuest, QuestLog
 from core.quest_loader import filter_quests
 from config import CATEGORY_STAT_MAP, DIFFICULTY_REWARDS
+from core.activity_logger import log_activity
 
 
 def _get_recent_completion_rate(session: Session, user: User, game_date: date) -> float:
@@ -122,6 +123,11 @@ def generate_daily_quests(
         quests.append(quest)
 
     session.commit()
+    for quest in quests:
+        log_activity(session, "quest_generated", "quest", user_id=user.id, detail={
+            "quest_id": quest.id, "title": quest.title,
+            "category": quest.category, "difficulty": quest.difficulty,
+        })
     return quests
 
 
@@ -157,6 +163,12 @@ def complete_quest(
     session.add(log)
     session.commit()
 
+    log_activity(session, "quest_completed", "quest", user_id=user.id, detail={
+        "quest_id": quest.id, "title": quest.title,
+        "category": quest.category, "difficulty": quest.difficulty,
+        "reward_xp": quest.reward_xp, "reward_stat_type": quest.reward_stat_type,
+    })
+
     return {"success": True, "quest": quest}
 
 
@@ -173,6 +185,11 @@ def skip_quest(session: Session, user: User, quest_id: int) -> dict:
     )
     session.add(log)
     session.commit()
+
+    log_activity(session, "quest_skipped", "quest", user_id=user.id, detail={
+        "quest_id": quest.id, "title": quest.title,
+        "category": quest.category, "difficulty": quest.difficulty,
+    })
 
     return {"success": True, "quest": quest}
 
@@ -196,6 +213,10 @@ def expire_pending_quests(session: Session, game_date: date) -> int:
         session.add(log)
 
     session.commit()
+    for quest in pending:
+        log_activity(session, "quest_expired", "quest", user_id=quest.user_id, detail={
+            "quest_id": quest.id, "title": quest.title,
+        })
     return len(pending)
 
 
@@ -251,6 +272,7 @@ def replace_quest(
     reward = DIFFICULTY_REWARDS[new_q["difficulty"]]
 
     # 기존 퀘스트 업데이트
+    old_title = quest.title
     quest.category = category
     quest.title = new_q["title"]
     quest.description = new_q["description"]
@@ -262,6 +284,10 @@ def replace_quest(
     quest.replace_count += 1
 
     session.commit()
+    log_activity(session, "quest_replaced", "quest", user_id=user.id, detail={
+        "old_title": old_title, "new_title": quest.title,
+        "category": quest.category,
+    })
     return {"success": True, "quest": quest}
 
 

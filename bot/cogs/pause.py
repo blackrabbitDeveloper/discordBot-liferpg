@@ -4,6 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 from core.database import get_session
 from core.models import User
+from core.activity_logger import log_activity
 
 
 class PauseCog(commands.Cog):
@@ -27,6 +28,9 @@ class PauseCog(commands.Cog):
             if user.status == "active":
                 user.status = "paused"
                 session.commit()
+                log_activity(session, "pause_toggle", "system", user_id=user.id, detail={
+                    "new_status": user.status,
+                })
                 await interaction.response.send_message(
                     "쉬기 모드로 전환했어요. 알림이 줄어들고, 회복 퀘스트 위주로 추천돼요.\n"
                     "다시 `/pause`를 누르면 복귀할 수 있어요.",
@@ -35,6 +39,9 @@ class PauseCog(commands.Cog):
             else:
                 user.status = "active"
                 session.commit()
+                log_activity(session, "pause_toggle", "system", user_id=user.id, detail={
+                    "new_status": user.status,
+                })
                 await interaction.response.send_message(
                     "다시 활성 모드로 돌아왔어요! 내일 아침부터 퀘스트가 다시 도착해요.",
                     ephemeral=True,

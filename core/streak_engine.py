@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
 from core.models import User, DailyQuest
+from core.activity_logger import log_activity
 
 
 def _has_completed_quest(session: Session, user: User, game_date: date) -> bool:
@@ -51,6 +52,8 @@ def update_streak(session: Session, user: User, game_date: date) -> dict:
     if user.last_streak_date == game_date:
         return {"streak": user.streak, "status": "already_updated"}
 
+    old_streak = user.streak
+
     # 쉬는 날 (퀘스트 없음) → 스트릭 유지, 변경 없음
     if _is_rest_day(session, user, game_date):
         user.last_streak_date = game_date
@@ -76,5 +79,8 @@ def update_streak(session: Session, user: User, game_date: date) -> dict:
             status = "decreased"
 
     user.last_streak_date = game_date
+    log_activity(session, "streak_change", "growth", user_id=user.id, detail={
+        "old_streak": old_streak, "new_streak": user.streak, "status": status,
+    })
     session.commit()
     return {"streak": user.streak, "status": status}

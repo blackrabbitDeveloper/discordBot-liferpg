@@ -35,6 +35,7 @@ class User(Base):
     quests = relationship("DailyQuest", back_populates="user", cascade="all, delete-orphan")
     daily_reports = relationship("DailyReport", cascade="all, delete-orphan")
     weekly_reports = relationship("WeeklyReport", cascade="all, delete-orphan")
+    activity_logs = relationship("UserActivityLog", cascade="all, delete-orphan")
 
 
 class UserStats(Base):
@@ -113,4 +114,15 @@ class WeeklyReport(Base):
     best_stat = Column(String)
     risk_pattern = Column(String)
     suggestion_text = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserActivityLog(Base):
+    __tablename__ = "user_activity_logs"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # nullable for pre-onboarding
+    action = Column(String, nullable=False)
+    category = Column(String, nullable=False)  # onboarding, flow, quest, growth, system
+    detail = Column(String, nullable=True)  # JSON string
     created_at = Column(DateTime, default=datetime.utcnow)

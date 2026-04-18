@@ -16,6 +16,8 @@ from core.reward_engine import apply_reward
 from core.streak_engine import update_streak
 from core.report_engine import generate_daily_report, generate_weekly_report
 from core.time_utils import get_game_date
+from core.activity_logger import log_activity, get_logs
+from core.analytics import generate_analytics
 from config import DATABASE_URL
 
 
@@ -93,6 +95,10 @@ class ConsoleAdapter:
                 self._expire()
             elif command == "reset":
                 self._reset()
+            elif command == "logs":
+                self._logs()
+            elif command == "analyze":
+                self._analyze()
             else:
                 print(f"알 수 없는 명령어: {command}. 'help'를 입력해보세요.")
 
@@ -110,6 +116,8 @@ class ConsoleAdapter:
   next-day       다음 날로 이동 (테스트용)
   expire         만료 처리 실행 (테스트용)
   reset          데이터 초기화
+  logs           최근 활동 로그 보기
+  analyze        AI 분석용 데이터 출력
   quit           종료
 """)
 
@@ -194,6 +202,11 @@ class ConsoleAdapter:
             if choice == 4:
                 print("\n오늘은 쉬어가는 턴이에요. 내일 다시 이어가면 됩니다.")
                 return
+
+            # 플로우 선택 로그
+            flow_names = {1: "normal", 2: "light", 3: "recovery", 4: "rest"}
+            log_activity(self.session, "morning_flow_choice", "flow",
+                        user_id=self._user.id, detail={"choice": flow_names[choice]})
 
             energy_override = None
             category_override = None
@@ -383,3 +396,29 @@ class ConsoleAdapter:
             print("데이터를 초기화했어요. 'start'로 다시 시작할 수 있어요.")
         else:
             print("초기화할 데이터가 없어요.")
+
+    def _logs(self):
+        if not self._user:
+            print("먼저 'start'로 온보딩을 완료하세요.")
+            return
+        logs = get_logs(self.session, user_id=self._user.id, limit=20)
+        print(f"\n최근 활동 로그 (최대 20건)")
+        print("-" * 60)
+        for l in logs:
+            import json
+            detail = json.loads(l.detail) if l.detail else {}
+            detail_str = ", ".join(f"{k}={v}" for k, v in detail.items()) if detail else ""
+            print(f"  [{l.created_at.strftime('%m/%d %H:%M')}] {l.category}/{l.action} {detail_str}")
+        if not logs:
+            print("  기록이 없어요.")
+        print("-" * 60)
+
+    def _analyze(self):
+        import json
+        data = generate_analytics(self.session, period_days=7)
+        print(f"\n{'=' * 60}")
+        print(f"  AI 분석 데이터 ({data['period']})")
+        print(f"{'=' * 60}")
+        print(json.dumps(data, indent=2, ensure_ascii=False, default=str))
+        print(f"{'=' * 60}")
+        print("\n위 JSON을 AI에게 전달하면 리밸런싱/리뉴얼 제안을 받을 수 있습니다.")
