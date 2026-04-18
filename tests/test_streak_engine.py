@@ -6,6 +6,12 @@ from core.models import Base, User, UserStats, DailyQuest
 from core.streak_engine import update_streak
 
 
+@pytest.fixture(autouse=True)
+def reset_streak_cache():
+    from core.streak_engine import _streak_updated_dates
+    _streak_updated_dates.clear()
+
+
 @pytest.fixture
 def db_session():
     engine = create_engine("sqlite:///:memory:")
@@ -95,9 +101,18 @@ def test_streak_resets_after_3_consecutive_misses(db_session, user):
     user.streak = 10
     user.streak_protected = True
     db_session.commit()
-    # 3일 연속 미완료
+    # 3일 연속 미완료: game_date=2026-04-19, so range(1,4) checks Apr 18, 17, 16
+    _add_quest(db_session, user, date(2026, 4, 16), "EXPIRED")
     _add_quest(db_session, user, date(2026, 4, 17), "EXPIRED")
     _add_quest(db_session, user, date(2026, 4, 18), "EXPIRED")
-    _add_quest(db_session, user, date(2026, 4, 19), "EXPIRED")
     update_streak(db_session, user, date(2026, 4, 19))
     assert user.streak == 0
+
+
+def test_streak_idempotent(db_session, user):
+    _add_quest(db_session, user, date(2026, 4, 19), "COMPLETED")
+    update_streak(db_session, user, date(2026, 4, 19))
+    assert user.streak == 1
+    # 같은 날 다시 호출해도 streak 변화 없음
+    update_streak(db_session, user, date(2026, 4, 19))
+    assert user.streak == 1
