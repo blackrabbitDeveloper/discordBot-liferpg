@@ -179,6 +179,14 @@ def test_generate_excludes_recent_completed(db_session, user, sample_quests):
     assert "물 마시기" not in titles
 
 
+def test_complete_quest_already_completed(db_session, user, sample_quests):
+    quests = generate_daily_quests(db_session, user, sample_quests, date(2026, 4, 19))
+    complete_quest(db_session, user, quests[0].id, date(2026, 4, 19))
+    result = complete_quest(db_session, user, quests[0].id, date(2026, 4, 19))
+    assert result["success"] is False
+    assert result["reason"] == "already_processed"
+
+
 def test_low_completion_rate_favors_easy(db_session, user, sample_quests):
     # 최근 3일: 9개 중 3개만 완료 (33%)
     for day_offset in range(1, 4):

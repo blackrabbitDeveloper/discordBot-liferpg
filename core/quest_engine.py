@@ -143,6 +143,8 @@ def complete_quest(
         return {"success": False, "reason": "not_found"}
     if quest.quest_date != game_date:
         return {"success": False, "reason": "past_quest", "quest": quest}
+    if quest.state != "PENDING":
+        return {"success": False, "reason": "already_processed"}
 
     quest.state = "COMPLETED"
     quest.completed_at = datetime.utcnow()

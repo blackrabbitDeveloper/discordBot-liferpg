@@ -65,3 +65,33 @@ def test_reset_user(db_session):
     create_user(db_session, "900", "유저", "건강", "운동", "medium", "normal", "moderate")
     reset_user(db_session, "900")
     assert is_onboarded(db_session, "900") is False
+
+
+def test_reset_user_cascades(db_session):
+    from core.models import DailyQuest, QuestLog, DailyReport
+    from datetime import date
+
+    user = create_user(db_session, "999", "캐스케이드", "건강", "운동", "medium", "normal", "moderate")
+
+    # 퀘스트와 로그 생성
+    quest = DailyQuest(
+        user_id=user.id, quest_date=date(2026, 4, 19), category="건강",
+        title="테스트", description="", estimated_minutes=5, difficulty="easy",
+        reward_xp=5, reward_stat_type="health", reward_stat_value=1, state="COMPLETED",
+    )
+    db_session.add(quest)
+    db_session.commit()
+
+    log = QuestLog(quest_id=quest.id, user_id=user.id, action_type="completed")
+    db_session.add(log)
+
+    report = DailyReport(user_id=user.id, report_date=date(2026, 4, 19), completed_count=1)
+    db_session.add(report)
+    db_session.commit()
+
+    # 리셋 시 모두 삭제되어야 함
+    reset_user(db_session, "999")
+
+    assert db_session.query(DailyQuest).count() == 0
+    assert db_session.query(QuestLog).count() == 0
+    assert db_session.query(DailyReport).count() == 0

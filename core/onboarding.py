@@ -81,10 +81,8 @@ def reset_user(session: Session, discord_id: str) -> bool:
     user = session.query(User).filter_by(discord_id=discord_id).first()
     if not user:
         return False
-    # Delete related records that aren't cascade-covered
-    session.query(QuestLog).filter_by(user_id=user.id).delete()
-    session.query(DailyReport).filter_by(user_id=user.id).delete()
-    session.query(WeeklyReport).filter_by(user_id=user.id).delete()
-    session.delete(user)  # cascade handles UserStats + DailyQuest
+    # QuestLog는 DailyQuest cascade로 자동 삭제
+    # DailyReport, WeeklyReport는 User cascade로 자동 삭제
+    session.delete(user)
     session.commit()
     return True

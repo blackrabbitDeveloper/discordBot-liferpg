@@ -32,6 +32,8 @@ class User(Base):
 
     stats = relationship("UserStats", uselist=False, back_populates="user", cascade="all, delete-orphan")
     quests = relationship("DailyQuest", back_populates="user", cascade="all, delete-orphan")
+    daily_reports = relationship("DailyReport", cascade="all, delete-orphan")
+    weekly_reports = relationship("WeeklyReport", cascade="all, delete-orphan")
 
 
 class UserStats(Base):
@@ -68,7 +70,7 @@ class DailyQuest(Base):
     completed_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="quests")
-    logs = relationship("QuestLog", back_populates="quest")
+    logs = relationship("QuestLog", back_populates="quest", cascade="all, delete-orphan")
 
 
 class QuestLog(Base):
