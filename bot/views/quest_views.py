@@ -133,6 +133,10 @@ async def _handle_quest_action(interaction: discord.Interaction, action: str):
                 await interaction.response.send_message(
                     "이미 처리된 퀘스트예요.", ephemeral=True
                 )
+            elif result.get("reason") == "replace_limit":
+                await interaction.response.send_message(
+                    "오늘 교체 횟수를 모두 사용했어요 (3/3).", ephemeral=True
+                )
         elif action == "skip":
             skip_quest(session, user, quest.id)
             await interaction.response.edit_message(

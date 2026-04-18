@@ -7,6 +7,7 @@ from core.quest_engine import generate_daily_quests, get_today_quests
 from core.quest_loader import load_quests
 from core.time_utils import get_game_date
 from bot.views.quest_views import QuestActionView, MorningFlowView
+from core.activity_logger import log_activity
 
 
 class QuestUICog(commands.Cog):
@@ -57,6 +58,11 @@ class QuestUICog(commands.Cog):
                     return
 
                 await flow_view.wait()
+
+                # 플로우 선택 로그
+                log_activity(session, "morning_flow_choice", "flow",
+                            user_id=user.id, detail={"choice": flow_view.choice or "timeout"})
+                session.commit()
 
                 if flow_view.choice == "rest":
                     await discord_user.send("오늘은 쉬어가는 턴이에요. 내일 다시 이어가면 됩니다. 푹 쉬세요!")

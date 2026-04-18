@@ -216,6 +216,7 @@ def expire_pending_quests(session: Session, game_date: date) -> int:
     for quest in pending:
         log_activity(session, "quest_expired", "quest", user_id=quest.user_id, detail={
             "quest_id": quest.id, "title": quest.title,
+            "category": quest.category, "difficulty": quest.difficulty,
         })
     return len(pending)
 

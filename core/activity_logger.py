@@ -20,7 +20,7 @@ def log_activity(
         detail=json.dumps(detail, ensure_ascii=False) if detail else None,
     )
     session.add(log)
-    session.commit()
+    session.flush()  # 호출자가 트랜잭션 관리 — commit은 호출자에서
 
 
 def get_logs(
