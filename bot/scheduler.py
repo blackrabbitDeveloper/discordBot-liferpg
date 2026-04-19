@@ -1,16 +1,13 @@
 import discord
 from discord.ext import commands, tasks
-from datetime import time, datetime, timedelta, timezone
+from datetime import time, datetime, timedelta
 from core.database import get_session
 from core.models import User
 from core.quest_engine import expire_pending_quests
 from core.streak_engine import update_streak
 from core.report_engine import generate_daily_report, generate_weekly_report
-from core.time_utils import get_game_date
+from core.time_utils import get_game_date, KST
 from config import DAY_BOUNDARY_HOUR, MORNING_QUEST_HOUR, EVENING_REPORT_HOUR, WEEKLY_REPORT_DAY
-
-# KST (UTC+9) 시간대
-KST = timezone(timedelta(hours=9))
 
 
 class SchedulerCog(commands.Cog):
