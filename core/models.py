@@ -2,7 +2,7 @@
 from datetime import datetime, date
 from sqlalchemy import (
     Column, Integer, String, Boolean, Float, Date, DateTime,
-    ForeignKey, create_engine,
+    ForeignKey, create_engine, UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -126,3 +126,16 @@ class UserActivityLog(Base):
     category = Column(String, nullable=False)  # onboarding, flow, quest, growth, system
     detail = Column(String, nullable=True)  # JSON string
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class GuildConfig(Base):
+    __tablename__ = "guild_configs"
+
+    id = Column(Integer, primary_key=True)
+    guild_id = Column(String, nullable=False)
+    config_type = Column(String, nullable=False)
+    channel_id = Column(String, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("guild_id", "config_type", name="uq_guild_config_type"),
+    )
