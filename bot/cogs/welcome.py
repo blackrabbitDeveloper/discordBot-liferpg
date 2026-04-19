@@ -10,20 +10,25 @@ class WelcomeCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        print(f"[WELCOME] on_member_join fired: {member.display_name} (bot={member.bot})")
         if member.bot:
             return
 
         session = get_session()
         try:
             channel_id = get_channel(session, str(member.guild.id), "welcome")
+            print(f"[WELCOME] guild={member.guild.id}, channel_id={channel_id}")
         finally:
             session.close()
 
         if channel_id is None:
+            print("[WELCOME] No welcome channel configured, skipping")
             return
 
         channel = member.guild.get_channel(int(channel_id))
+        print(f"[WELCOME] Resolved channel: {channel}")
         if channel is None:
+            print("[WELCOME] Channel not found in cache, skipping")
             return
 
         embed = discord.Embed(
