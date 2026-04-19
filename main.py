@@ -7,6 +7,7 @@ from core.models import Base
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -37,6 +38,8 @@ async def setup():
     await bot.load_extension("bot.cogs.goal")
     await bot.load_extension("bot.cogs.pause")
     await bot.load_extension("bot.scheduler")
+    await bot.load_extension("bot.cogs.settings")
+    await bot.load_extension("bot.cogs.welcome")
     await bot.load_extension("bot.cogs.admin")
 
 
