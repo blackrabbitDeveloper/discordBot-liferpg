@@ -1,18 +1,22 @@
+import logging
 import discord
 from discord.ext import commands, tasks
 from datetime import time, datetime, timedelta
 from core.database import get_session
-from core.models import User
+from core.models import User, DailyQuest, DailyReport, WeeklyReport
 from core.quest_engine import expire_pending_quests
 from core.streak_engine import update_streak
 from core.report_engine import generate_daily_report, generate_weekly_report
 from core.time_utils import get_game_date, KST
 from config import DAY_BOUNDARY_HOUR, MORNING_QUEST_HOUR, EVENING_REPORT_HOUR, WEEKLY_REPORT_DAY
 
+log = logging.getLogger(__name__)
+
 
 class SchedulerCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self._catchup_done = False
 
     async def cog_load(self):
         self.morning_task.start()
@@ -107,12 +111,116 @@ class SchedulerCog(commands.Cog):
                 except discord.Forbidden:
                     pass
 
+    async def _catch_up(self):
+        """봇 시작 시 놓친 스케줄 작업을 보충 실행."""
+        now = datetime.now(KST)
+        game_date = get_game_date(now)
+        log.info("Catch-up check at %s (game_date=%s)", now.strftime("%H:%M"), game_date)
+
+        # 1) 새벽 4시 지났으면: 전날 만료 처리
+        if now.hour >= DAY_BOUNDARY_HOUR:
+            with get_session() as session:
+                yesterday = game_date - timedelta(days=1)
+                expire_pending_quests(session, yesterday)
+                users = session.query(User).filter_by(status="active").all()
+                for user in users:
+                    update_streak(session, user, yesterday)
+            log.info("Catch-up: expire task done")
+
+        # 2) 아침 8시 지났으면: 오늘 퀘스트 미발송 유저에게 발송
+        if now.hour >= MORNING_QUEST_HOUR:
+            quest_cog = self.bot.get_cog("QuestUICog")
+            if quest_cog:
+                with get_session() as session:
+                    users = session.query(User).filter_by(status="active").all()
+                    no_quest_ids = []
+                    for user in users:
+                        has_quests = (
+                            session.query(DailyQuest)
+                            .filter_by(user_id=user.id, quest_date=game_date)
+                            .first()
+                        )
+                        if not has_quests:
+                            no_quest_ids.append(user.discord_id)
+
+                for discord_id in no_quest_ids:
+                    log.info("Catch-up: sending quests to %s", discord_id)
+                    await quest_cog.send_daily_quests(discord_id)
+
+        # 3) 저녁 9시 지났으면: 일일 리포트 미발송 유저에게 발송
+        if now.hour >= EVENING_REPORT_HOUR:
+            with get_session() as session:
+                users = session.query(User).filter_by(status="active").all()
+                for user in users:
+                    existing = (
+                        session.query(DailyReport)
+                        .filter_by(user_id=user.id, report_date=game_date)
+                        .first()
+                    )
+                    if existing:
+                        continue
+                    report = generate_daily_report(session, user, game_date)
+                    try:
+                        discord_user = await self.bot.fetch_user(int(user.discord_id))
+                        embed = discord.Embed(
+                            title=f"오늘 결과 ({report.report_date})",
+                            color=discord.Color.gold(),
+                        )
+                        embed.add_field(name="완료", value=f"{report.completed_count}개", inline=True)
+                        embed.add_field(name="건너뜀", value=f"{report.skipped_count}개", inline=True)
+                        embed.add_field(name="만료", value=f"{report.expired_count}개", inline=True)
+                        if report.main_growth_stat:
+                            embed.add_field(name="가장 성장한 영역", value=report.main_growth_stat)
+                        embed.add_field(name="스트릭", value=f"{user.streak}일")
+                        embed.set_footer(text=report.summary_text)
+                        await discord_user.send(embed=embed)
+                        log.info("Catch-up: daily report sent to %s", user.discord_id)
+                    except discord.Forbidden:
+                        pass
+
+            # 4) 일요일이면: 주간 리포트
+            if game_date.weekday() == WEEKLY_REPORT_DAY:
+                with get_session() as session:
+                    week_start = game_date - timedelta(days=6)
+                    week_end = game_date
+                    users = session.query(User).filter_by(status="active").all()
+                    for user in users:
+                        existing = (
+                            session.query(WeeklyReport)
+                            .filter_by(user_id=user.id, week_start=week_start, week_end=week_end)
+                            .first()
+                        )
+                        if existing:
+                            continue
+                        report = generate_weekly_report(session, user, week_start, week_end)
+                        try:
+                            discord_user = await self.bot.fetch_user(int(user.discord_id))
+                            embed = discord.Embed(
+                                title=f"이번 주 요약 ({report.week_start} ~ {report.week_end})",
+                                color=discord.Color.purple(),
+                            )
+                            embed.add_field(name="완료율", value=f"{report.completion_rate}%")
+                            if report.best_stat:
+                                embed.add_field(name="가장 성장한 영역", value=report.best_stat)
+                            if report.risk_pattern:
+                                embed.add_field(name="어려웠던 패턴", value=report.risk_pattern)
+                            embed.set_footer(text=report.suggestion_text)
+                            await discord_user.send(embed=embed)
+                            log.info("Catch-up: weekly report sent to %s", user.discord_id)
+                        except discord.Forbidden:
+                            pass
+
+        log.info("Catch-up complete")
+
     @expire_task.before_loop
     @morning_task.before_loop
     @evening_task.before_loop
     @weekly_task.before_loop
     async def before_tasks(self):
         await self.bot.wait_until_ready()
+        if not self._catchup_done:
+            self._catchup_done = True
+            await self._catch_up()
 
 
 async def setup(bot: commands.Bot):
