@@ -22,8 +22,7 @@ class QuestUICog(commands.Cog):
         """특정 유저에게 DM으로 오늘 퀘스트를 보낸다.
         skip_flow=True면 플로우 선택 없이 바로 퀘스트 발송 (온보딩 직후 등).
         """
-        session = get_session()
-        try:
+        with get_session() as session:
             user = session.query(User).filter_by(discord_id=user_discord_id).first()
             if not user or user.status != "active":
                 return
@@ -103,8 +102,6 @@ class QuestUICog(commands.Cog):
             )
 
             await self._send_quest_dms(user_discord_id, quests, session)
-        finally:
-            session.close()
 
     async def _send_quest_dms(self, user_discord_id: str, quests: list, session):
         """퀘스트를 개별 DM으로 발송."""

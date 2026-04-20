@@ -29,16 +29,13 @@ class SchedulerCog(commands.Cog):
     @tasks.loop(time=time(hour=DAY_BOUNDARY_HOUR, minute=0, tzinfo=KST))
     async def expire_task(self):
         """새벽 4시 KST: 전날 PENDING 퀘스트 만료 + 스트릭 업데이트."""
-        session = get_session()
-        try:
+        with get_session() as session:
             yesterday = get_game_date() - timedelta(days=1)
             expire_pending_quests(session, yesterday)
 
             users = session.query(User).filter_by(status="active").all()
             for user in users:
                 update_streak(session, user, yesterday)
-        finally:
-            session.close()
 
     @tasks.loop(time=time(hour=MORNING_QUEST_HOUR, minute=0, tzinfo=KST))
     async def morning_task(self):
@@ -47,12 +44,9 @@ class SchedulerCog(commands.Cog):
         if not quest_cog:
             return
 
-        session = get_session()
-        try:
+        with get_session() as session:
             users = session.query(User).filter_by(status="active").all()
             discord_ids = [user.discord_id for user in users]
-        finally:
-            session.close()
 
         for discord_id in discord_ids:
             await quest_cog.send_daily_quests(discord_id)
@@ -60,8 +54,7 @@ class SchedulerCog(commands.Cog):
     @tasks.loop(time=time(hour=EVENING_REPORT_HOUR, minute=0, tzinfo=KST))
     async def evening_task(self):
         """저녁 9시 KST: 일일 리포트 발송."""
-        session = get_session()
-        try:
+        with get_session() as session:
             game_date = get_game_date()
             users = session.query(User).filter_by(status="active").all()
 
@@ -83,8 +76,6 @@ class SchedulerCog(commands.Cog):
                     await discord_user.send(embed=embed)
                 except discord.Forbidden:
                     pass
-        finally:
-            session.close()
 
     @tasks.loop(time=time(hour=EVENING_REPORT_HOUR, minute=0, tzinfo=KST))
     async def weekly_task(self):
@@ -93,8 +84,7 @@ class SchedulerCog(commands.Cog):
         if game_date.weekday() != WEEKLY_REPORT_DAY:
             return
 
-        session = get_session()
-        try:
+        with get_session() as session:
             week_start = game_date - timedelta(days=6)
             week_end = game_date
 
@@ -116,8 +106,6 @@ class SchedulerCog(commands.Cog):
                     await discord_user.send(embed=embed)
                 except discord.Forbidden:
                     pass
-        finally:
-            session.close()
 
     @expire_task.before_loop
     @morning_task.before_loop

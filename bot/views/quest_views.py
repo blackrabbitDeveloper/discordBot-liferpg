@@ -24,15 +24,15 @@ class QuestActionView(discord.ui.View):
 
     @discord.ui.button(label="완료했어요", style=discord.ButtonStyle.success, emoji="\u2705")
     async def complete_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await _handle_quest_action(interaction, "complete")
+        pass  # on_interaction에서 처리
 
     @discord.ui.button(label="다른 걸로", style=discord.ButtonStyle.primary, emoji="\U0001f504")
     async def replace_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await _handle_quest_action(interaction, "replace")
+        pass  # on_interaction에서 처리
 
     @discord.ui.button(label="건너뛰기", style=discord.ButtonStyle.secondary, emoji="\u23ed\ufe0f")
     async def skip_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await _handle_quest_action(interaction, "skip")
+        pass  # on_interaction에서 처리
 
 
 async def handle_quest_interaction(bot: discord.Client, interaction: discord.Interaction):
@@ -55,11 +55,10 @@ async def handle_quest_interaction(bot: discord.Client, interaction: discord.Int
 
 async def _handle_quest_action(interaction: discord.Interaction, action: str):
     """퀘스트 버튼 액션 공통 처리."""
-    session = get_session()
-    discord_id = str(interaction.user.id)
-    game_date = get_game_date()
+    with get_session() as session:
+        discord_id = str(interaction.user.id)
+        game_date = get_game_date()
 
-    try:
         user = session.query(User).filter_by(discord_id=discord_id).first()
         if not user:
             await interaction.response.send_message(
@@ -148,14 +147,11 @@ async def _handle_quest_action(interaction: discord.Interaction, action: str):
             await interaction.response.edit_message(
                 content=f"**{quest.title}** 건너뜀", embed=None, view=None
             )
-            import asyncio
             await asyncio.sleep(3)
             try:
                 await interaction.message.delete()
             except Exception:
                 pass
-    finally:
-        session.close()
 
 
 class LateLogView(discord.ui.View):
@@ -165,8 +161,7 @@ class LateLogView(discord.ui.View):
 
     @discord.ui.button(label="기록만 하기", style=discord.ButtonStyle.secondary)
     async def late_log(self, interaction: discord.Interaction, button: discord.ui.Button):
-        session = get_session()
-        try:
+        with get_session() as session:
             discord_id = str(interaction.user.id)
             user = session.query(User).filter_by(discord_id=discord_id).first()
             if user:
@@ -174,8 +169,6 @@ class LateLogView(discord.ui.View):
                 await interaction.response.edit_message(
                     content="회고 기록으로 남겼어요.", view=None
                 )
-        finally:
-            session.close()
 
     @discord.ui.button(label="오늘 퀘스트 보기", style=discord.ButtonStyle.primary)
     async def today(self, interaction: discord.Interaction, button: discord.ui.Button):

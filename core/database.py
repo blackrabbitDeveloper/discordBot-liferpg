@@ -1,4 +1,5 @@
 # core/database.py
+from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -16,5 +17,16 @@ def get_engine():
     return _engine
 
 
-def get_session() -> Session:
-    return _SessionLocal()
+@contextmanager
+def get_session():
+    """Context manager for database sessions.
+    Usage: with get_session() as session: ...
+    Rolls back on exception, always closes."""
+    session = _SessionLocal()
+    try:
+        yield session
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

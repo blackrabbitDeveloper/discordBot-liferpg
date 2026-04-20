@@ -20,8 +20,7 @@ class StartCog(commands.Cog):
 
     @app_commands.command(name="start", description="Life RPG 모험을 시작합니다")
     async def start(self, interaction: discord.Interaction):
-        session = get_session()
-        try:
+        with get_session() as session:
             discord_id = str(interaction.user.id)
             log_activity(session, "onboarding_start", "onboarding", detail={"discord_id": discord_id})
 
@@ -128,8 +127,6 @@ class StartCog(commands.Cog):
             embed.set_footer(text="첫 퀘스트를 보내드릴게요!")
 
             await step_msg.edit(content=None, embed=embed, view=None)
-        finally:
-            session.close()
 
         # 온보딩 직후 첫 퀘스트 DM 발송
         quest_cog = self.bot.get_cog("QuestUICog")

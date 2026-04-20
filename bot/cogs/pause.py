@@ -13,8 +13,7 @@ class PauseCog(commands.Cog):
 
     @app_commands.command(name="pause", description="쉬기 모드를 전환합니다")
     async def pause(self, interaction: discord.Interaction):
-        session = get_session()
-        try:
+        with get_session() as session:
             user = session.query(User).filter_by(
                 discord_id=str(interaction.user.id)
             ).first()
@@ -46,8 +45,6 @@ class PauseCog(commands.Cog):
                     "다시 활성 모드로 돌아왔어요! 내일 아침부터 퀘스트가 다시 도착해요.",
                     ephemeral=True,
                 )
-        finally:
-            session.close()
 
 
 async def setup(bot: commands.Bot):

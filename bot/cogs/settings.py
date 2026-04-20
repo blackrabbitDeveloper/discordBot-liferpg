@@ -24,8 +24,7 @@ class SettingsCog(commands.Cog):
         config_type: app_commands.Choice[str],
         channel: discord.TextChannel | None = None,
     ):
-        session = get_session()
-        try:
+        with get_session() as session:
             guild_id = str(interaction.guild_id)
 
             if channel is None:
@@ -44,8 +43,6 @@ class SettingsCog(commands.Cog):
             await interaction.response.send_message(
                 f"**{config_type.name}** 채널을 {channel.mention}(으)로 설정했어요!", ephemeral=True
             )
-        finally:
-            session.close()
 
     @setchannel.error
     async def setchannel_error(self, interaction: discord.Interaction, error):

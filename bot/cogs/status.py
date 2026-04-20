@@ -12,8 +12,7 @@ class StatusCog(commands.Cog):
 
     @app_commands.command(name="status", description="현재 상태를 확인합니다")
     async def status(self, interaction: discord.Interaction):
-        session = get_session()
-        try:
+        with get_session() as session:
             user = session.query(User).filter_by(
                 discord_id=str(interaction.user.id)
             ).first()
@@ -43,8 +42,6 @@ class StatusCog(commands.Cog):
             )
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
-        finally:
-            session.close()
 
 
 async def setup(bot: commands.Bot):

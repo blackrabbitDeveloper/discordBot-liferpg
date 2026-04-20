@@ -13,11 +13,8 @@ class WelcomeCog(commands.Cog):
         if member.bot:
             return
 
-        session = get_session()
-        try:
+        with get_session() as session:
             channel_id = get_channel(session, str(member.guild.id), "welcome")
-        finally:
-            session.close()
 
         if channel_id is None:
             return

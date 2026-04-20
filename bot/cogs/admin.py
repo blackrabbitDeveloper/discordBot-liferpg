@@ -24,8 +24,7 @@ class AdminCog(commands.Cog):
 
         await interaction.response.defer(ephemeral=True)
 
-        session = get_session()
-        try:
+        with get_session() as session:
             data = generate_analytics(session, period_days=days)
             json_str = json.dumps(data, indent=2, ensure_ascii=False, default=str)
 
@@ -98,12 +97,7 @@ class AdminCog(commands.Cog):
                     diff_text = " / ".join(f"{k}: {v}%" for k, v in diff_rates.items())
                     embed.add_field(name="난이도별 완료율", value=diff_text, inline=False)
 
-                flow = summary.get("flow_distribution", {})
-                if flow:
-                    flow_text = " / ".join(f"{k}: {v}회" for k, v in flow.items())
-                    embed.add_field(name="플로우 분포", value=flow_text, inline=False)
-
-                replaced = summary.get("most_replaced_quests", [])
+                replaced = quest.get("most_replaced_quests", [])
                 if replaced:
                     embed.add_field(
                         name="교체 많은 퀘스트",
@@ -121,8 +115,6 @@ class AdminCog(commands.Cog):
                 await interaction.followup.send(embed=embed, file=file, ephemeral=True)
             else:
                 await interaction.followup.send(f"```json\n{json_str}\n```", ephemeral=True)
-        finally:
-            session.close()
 
 
 async def setup(bot: commands.Bot):

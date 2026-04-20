@@ -25,8 +25,7 @@ class GoalCog(commands.Cog):
         category: app_commands.Choice[str],
         text: str | None = None,
     ):
-        session = get_session()
-        try:
+        with get_session() as session:
             user = session.query(User).filter_by(
                 discord_id=str(interaction.user.id)
             ).first()
@@ -48,8 +47,6 @@ class GoalCog(commands.Cog):
                 f"목표가 변경되었어요! → {user.goal_category}: {user.goal_text}",
                 ephemeral=True,
             )
-        finally:
-            session.close()
 
 
 async def setup(bot: commands.Bot):
