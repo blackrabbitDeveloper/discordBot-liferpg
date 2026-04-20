@@ -115,16 +115,16 @@ class SchedulerCog(commands.Cog):
         """봇 시작 시 놓친 스케줄 작업을 보충 실행."""
         now = datetime.now(KST)
         game_date = get_game_date(now)
-        print(f"[Catch-up] start at {now.strftime('%H:%M')} KST (game_date={game_date})")
+        print(f"[Catch-up] start at {now.strftime('%H:%M')} KST (game_date={game_date})", flush=True)
         log.info("Catch-up check at %s (game_date=%s)", now.strftime("%H:%M"), game_date)
 
         try:
             await self._do_catch_up(now, game_date)
         except Exception:
             log.exception("Catch-up failed")
-            print("[Catch-up] ERROR — see log above")
+            print("[Catch-up] ERROR — see log above", flush=True)
 
-        print("[Catch-up] done")
+        print("[Catch-up] done", flush=True)
         log.info("Catch-up complete")
 
     async def _do_catch_up(self, now: datetime, game_date):
@@ -137,7 +137,7 @@ class SchedulerCog(commands.Cog):
                 users = session.query(User).filter_by(status="active").all()
                 for user in users:
                     update_streak(session, user, yesterday)
-            print("[Catch-up] expire task done")
+            print("[Catch-up] expire task done", flush=True)
 
         # 2) 아침 8시 지났으면: 오늘 퀘스트 미발송 유저에게 발송
         if now.hour >= MORNING_QUEST_HOUR:
@@ -155,12 +155,12 @@ class SchedulerCog(commands.Cog):
                         if not has_quests:
                             no_quest_ids.append(user.discord_id)
 
-                print(f"[Catch-up] quest catch-up: {len(no_quest_ids)} users need quests")
+                print(f"[Catch-up] quest catch-up: {len(no_quest_ids)} users need quests", flush=True)
                 for discord_id in no_quest_ids:
-                    print(f"[Catch-up] sending quests to {discord_id}")
+                    print(f"[Catch-up] sending quests to {discord_id}", flush=True)
                     await quest_cog.send_daily_quests(discord_id)
             else:
-                print("[Catch-up] WARNING: QuestUICog not found")
+                print("[Catch-up] WARNING: QuestUICog not found", flush=True)
 
         # 3) 저녁 9시 지났으면: 일일 리포트 미발송 유저에게 발송
         if now.hour >= EVENING_REPORT_HOUR:
@@ -230,7 +230,9 @@ class SchedulerCog(commands.Cog):
     @evening_task.before_loop
     @weekly_task.before_loop
     async def before_tasks(self):
+        print("[Scheduler] before_tasks called, waiting for ready...", flush=True)
         await self.bot.wait_until_ready()
+        print("[Scheduler] bot is ready", flush=True)
         if not self._catchup_done:
             self._catchup_done = True
             await self._catch_up()
