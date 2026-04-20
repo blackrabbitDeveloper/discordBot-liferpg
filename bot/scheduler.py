@@ -225,17 +225,19 @@ class SchedulerCog(commands.Cog):
                         except discord.Forbidden:
                             pass
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        if not self._catchup_done:
+            self._catchup_done = True
+            print("[Scheduler] on_ready → running catch-up", flush=True)
+            await self._catch_up()
+
     @expire_task.before_loop
     @morning_task.before_loop
     @evening_task.before_loop
     @weekly_task.before_loop
     async def before_tasks(self):
-        print("[Scheduler] before_tasks called, waiting for ready...", flush=True)
         await self.bot.wait_until_ready()
-        print("[Scheduler] bot is ready", flush=True)
-        if not self._catchup_done:
-            self._catchup_done = True
-            await self._catch_up()
 
 
 async def setup(bot: commands.Bot):
