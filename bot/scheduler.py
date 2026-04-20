@@ -115,8 +115,20 @@ class SchedulerCog(commands.Cog):
         """봇 시작 시 놓친 스케줄 작업을 보충 실행."""
         now = datetime.now(KST)
         game_date = get_game_date(now)
+        print(f"[Catch-up] start at {now.strftime('%H:%M')} KST (game_date={game_date})")
         log.info("Catch-up check at %s (game_date=%s)", now.strftime("%H:%M"), game_date)
 
+        try:
+            await self._do_catch_up(now, game_date)
+        except Exception:
+            log.exception("Catch-up failed")
+            print("[Catch-up] ERROR — see log above")
+
+        print("[Catch-up] done")
+        log.info("Catch-up complete")
+
+    async def _do_catch_up(self, now: datetime, game_date):
+        """catch-up 실제 로직."""
         # 1) 새벽 4시 지났으면: 전날 만료 처리
         if now.hour >= DAY_BOUNDARY_HOUR:
             with get_session() as session:
@@ -125,7 +137,7 @@ class SchedulerCog(commands.Cog):
                 users = session.query(User).filter_by(status="active").all()
                 for user in users:
                     update_streak(session, user, yesterday)
-            log.info("Catch-up: expire task done")
+            print("[Catch-up] expire task done")
 
         # 2) 아침 8시 지났으면: 오늘 퀘스트 미발송 유저에게 발송
         if now.hour >= MORNING_QUEST_HOUR:
@@ -143,9 +155,12 @@ class SchedulerCog(commands.Cog):
                         if not has_quests:
                             no_quest_ids.append(user.discord_id)
 
+                print(f"[Catch-up] quest catch-up: {len(no_quest_ids)} users need quests")
                 for discord_id in no_quest_ids:
-                    log.info("Catch-up: sending quests to %s", discord_id)
+                    print(f"[Catch-up] sending quests to {discord_id}")
                     await quest_cog.send_daily_quests(discord_id)
+            else:
+                print("[Catch-up] WARNING: QuestUICog not found")
 
         # 3) 저녁 9시 지났으면: 일일 리포트 미발송 유저에게 발송
         if now.hour >= EVENING_REPORT_HOUR:
@@ -209,8 +224,6 @@ class SchedulerCog(commands.Cog):
                             log.info("Catch-up: weekly report sent to %s", user.discord_id)
                         except discord.Forbidden:
                             pass
-
-        log.info("Catch-up complete")
 
     @expire_task.before_loop
     @morning_task.before_loop
