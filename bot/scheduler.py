@@ -44,42 +44,59 @@ class SchedulerCog(commands.Cog):
     @tasks.loop(time=time(hour=MORNING_QUEST_HOUR, minute=0, tzinfo=KST))
     async def morning_task(self):
         """아침 8시 KST: 퀘스트 발송."""
+        log.info("morning_task triggered")
+        print("[Scheduler] morning_task triggered", flush=True)
         quest_cog = self.bot.get_cog("QuestUICog")
         if not quest_cog:
+            print("[Scheduler] WARNING: QuestUICog not found", flush=True)
             return
 
-        with get_session() as session:
-            users = session.query(User).filter_by(status="active").all()
-            discord_ids = [user.discord_id for user in users]
+        try:
+            with get_session() as session:
+                users = session.query(User).filter_by(status="active").all()
+                discord_ids = [user.discord_id for user in users]
 
-        for discord_id in discord_ids:
-            await quest_cog.send_daily_quests(discord_id)
+            print(f"[Scheduler] morning quests: {len(discord_ids)} users", flush=True)
+            for discord_id in discord_ids:
+                await quest_cog.send_daily_quests(discord_id)
+                print(f"[Scheduler] quests sent to {discord_id}", flush=True)
+        except Exception:
+            log.exception("morning_task failed")
+            print("[Scheduler] morning_task ERROR — see log", flush=True)
 
     @tasks.loop(time=time(hour=EVENING_REPORT_HOUR, minute=0, tzinfo=KST))
     async def evening_task(self):
         """저녁 9시 KST: 일일 리포트 발송."""
-        with get_session() as session:
-            game_date = get_game_date()
-            users = session.query(User).filter_by(status="active").all()
+        log.info("evening_task triggered")
+        print("[Scheduler] evening_task triggered", flush=True)
+        try:
+            with get_session() as session:
+                game_date = get_game_date()
+                users = session.query(User).filter_by(status="active").all()
+                print(f"[Scheduler] daily report: {len(users)} active users, game_date={game_date}", flush=True)
 
-            for user in users:
-                report = generate_daily_report(session, user, game_date)
-                try:
-                    discord_user = await self.bot.fetch_user(int(user.discord_id))
-                    embed = discord.Embed(
-                        title=f"오늘 결과 ({report.report_date})",
-                        color=discord.Color.gold(),
-                    )
-                    embed.add_field(name="완료", value=f"{report.completed_count}개", inline=True)
-                    embed.add_field(name="건너뜀", value=f"{report.skipped_count}개", inline=True)
-                    embed.add_field(name="만료", value=f"{report.expired_count}개", inline=True)
-                    if report.main_growth_stat:
-                        embed.add_field(name="가장 성장한 영역", value=report.main_growth_stat)
-                    embed.add_field(name="스트릭", value=f"{user.streak}일")
-                    embed.set_footer(text=report.summary_text)
-                    await discord_user.send(embed=embed)
-                except discord.Forbidden:
-                    pass
+                for user in users:
+                    report = generate_daily_report(session, user, game_date)
+                    try:
+                        discord_user = await self.bot.fetch_user(int(user.discord_id))
+                        embed = discord.Embed(
+                            title=f"오늘 결과 ({report.report_date})",
+                            color=discord.Color.gold(),
+                        )
+                        embed.add_field(name="완료", value=f"{report.completed_count}개", inline=True)
+                        embed.add_field(name="건너뜀", value=f"{report.skipped_count}개", inline=True)
+                        embed.add_field(name="만료", value=f"{report.expired_count}개", inline=True)
+                        if report.main_growth_stat:
+                            embed.add_field(name="가장 성장한 영역", value=report.main_growth_stat)
+                        embed.add_field(name="스트릭", value=f"{user.streak}일")
+                        embed.set_footer(text=report.summary_text)
+                        await discord_user.send(embed=embed)
+                        print(f"[Scheduler] daily report sent to {user.discord_id}", flush=True)
+                    except discord.Forbidden:
+                        log.warning("Cannot DM user %s (Forbidden)", user.discord_id)
+        except Exception:
+            log.exception("evening_task failed")
+            print("[Scheduler] evening_task ERROR — see log", flush=True)
 
     @tasks.loop(time=time(hour=EVENING_REPORT_HOUR, minute=0, tzinfo=KST))
     async def weekly_task(self):
