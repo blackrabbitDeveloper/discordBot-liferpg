@@ -29,7 +29,7 @@ async def on_interaction(interaction: discord.Interaction):
             return
 
 
-async def setup():
+async def setup_hook():
     init_db(DATABASE_URL)
     Base.metadata.create_all(get_engine())
     await bot.load_extension("bot.cogs.start")
@@ -42,10 +42,10 @@ async def setup():
     await bot.load_extension("bot.cogs.welcome")
     await bot.load_extension("bot.cogs.admin")
 
+bot.setup_hook = setup_hook
+
 
 def main():
-    import asyncio
-    asyncio.run(setup())
     bot.run(DISCORD_TOKEN)
 
 
