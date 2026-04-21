@@ -93,6 +93,18 @@ def generate_daily_quests(
             if q not in filtered:
                 filtered.append(q)
 
+    # 그래도 부족하면 recent_titles 제한 해제하고 반복 허용
+    if len(filtered) < 3:
+        all_quests = filter_quests(
+            quest_pool,
+            energy=energy,
+            time_budget=user.time_budget,
+            difficulty=difficulty,
+        )
+        for q in all_quests:
+            if q not in filtered:
+                filtered.append(q)
+
     # 최근 완료율 낮으면 easy 위주로
     completion_rate = _get_recent_completion_rate(session, user, game_date)
     if completion_rate < 0.5 and filtered:
