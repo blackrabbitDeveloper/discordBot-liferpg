@@ -4,12 +4,23 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from core.database import get_session
+from core.models import User
 from core.analytics import generate_analytics
 
 
 class AdminCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """서버를 나간 유저를 자동으로 inactive 처리."""
+        with get_session() as session:
+            user = session.query(User).filter_by(discord_id=str(member.id)).first()
+            if user and user.status == "active":
+                user.status = "inactive"
+                session.commit()
+                print(f"[Admin] user {member.id} left server → inactive", flush=True)
 
     @app_commands.command(name="analyze", description="[개발자 전용] AI 분석용 데이터를 출력합니다")
     @app_commands.describe(days="분석 기간 (일, 기본 7)")

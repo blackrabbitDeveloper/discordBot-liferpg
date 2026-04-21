@@ -189,6 +189,19 @@ class SchedulerCog(commands.Cog):
 
     async def _do_catch_up(self, now: datetime, game_date):
         """catch-up 실제 로직."""
+        # 0) 서버에 없는 active 유저 → inactive 처리
+        with get_session() as session:
+            users = session.query(User).filter_by(status="active").all()
+            for user in users:
+                for guild in self.bot.guilds:
+                    member = guild.get_member(int(user.discord_id))
+                    if member:
+                        break
+                else:
+                    user.status = "inactive"
+                    print(f"[Catch-up] user {user.discord_id} not in any guild → inactive", flush=True)
+            session.commit()
+
         # 1) 새벽 4시 지났으면: 전날 만료 처리
         if now.hour >= DAY_BOUNDARY_HOUR:
             with get_session() as session:
