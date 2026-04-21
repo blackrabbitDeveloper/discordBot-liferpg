@@ -23,12 +23,14 @@ class SchedulerCog(commands.Cog):
         self.evening_task.start()
         self.weekly_task.start()
         self.expire_task.start()
+        self.catchup_loop.start()
 
     async def cog_unload(self):
         self.morning_task.cancel()
         self.evening_task.cancel()
         self.weekly_task.cancel()
         self.expire_task.cancel()
+        self.catchup_loop.cancel()
 
     @tasks.loop(time=time(hour=DAY_BOUNDARY_HOUR, minute=0, tzinfo=KST))
     async def expire_task(self):
@@ -127,6 +129,35 @@ class SchedulerCog(commands.Cog):
                     await discord_user.send(embed=embed)
                 except discord.Forbidden:
                     pass
+
+    @tasks.loop(minutes=30)
+    async def catchup_loop(self):
+        """30분마다 오늘 퀘스트/리포트 누락 여부를 확인하고 보충 발송."""
+        if not self._catchup_done:
+            return  # on_ready catch-up이 아직 안 끝났으면 스킵
+
+        now = datetime.now(KST)
+        game_date = get_game_date(now)
+
+        # 아침 8시 이후: 퀘스트 미발송 체크
+        if now.hour >= MORNING_QUEST_HOUR:
+            quest_cog = self.bot.get_cog("QuestUICog")
+            if quest_cog:
+                with get_session() as session:
+                    users = session.query(User).filter_by(status="active").all()
+                    for user in users:
+                        has_quests = (
+                            session.query(DailyQuest)
+                            .filter_by(user_id=user.id, quest_date=game_date)
+                            .first()
+                        )
+                        if not has_quests:
+                            print(f"[Catchup-loop] sending quests to {user.discord_id}", flush=True)
+                            await quest_cog.send_daily_quests(user.discord_id)
+
+    @catchup_loop.before_loop
+    async def before_catchup_loop(self):
+        await self.bot.wait_until_ready()
 
     async def _catch_up(self):
         """봇 시작 시 놓친 스케줄 작업을 보충 실행."""
@@ -248,6 +279,14 @@ class SchedulerCog(commands.Cog):
             self._catchup_done = True
             print("[Scheduler] on_ready → running catch-up", flush=True)
             await self._catch_up()
+            # 디버그: 각 task의 다음 실행 예정 시각 출력
+            for name, task in [
+                ("expire_task", self.expire_task),
+                ("morning_task", self.morning_task),
+                ("evening_task", self.evening_task),
+            ]:
+                nxt = task.next_iteration
+                print(f"[Scheduler] {name} next_iteration={nxt}", flush=True)
 
     @expire_task.before_loop
     @morning_task.before_loop
