@@ -24,8 +24,13 @@ class QuestUICog(commands.Cog):
         """
         with get_session() as session:
             user = session.query(User).filter_by(discord_id=user_discord_id).first()
-            if not user or user.status != "active":
+            if not user:
+                print(f"[QuestUI] user not found: {user_discord_id}", flush=True)
                 return
+            if user.status != "active":
+                print(f"[QuestUI] user not active: {user_discord_id} status={user.status}", flush=True)
+                return
+            print(f"[QuestUI] send_daily_quests: user={user_discord_id} cat={user.goal_category} energy={user.energy_preference} time={user.time_budget} diff={user.difficulty_preference}", flush=True)
 
             game_date = get_game_date()
 

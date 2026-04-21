@@ -99,6 +99,7 @@ def generate_daily_quests(
             filtered = easy_quests
 
     count = min(3, len(filtered))
+    print(f"[QuestEngine] generate: user_id={user.id} filtered={len(filtered)} count={count}", flush=True)
     selected = random.sample(filtered, count)
 
     quests = []
