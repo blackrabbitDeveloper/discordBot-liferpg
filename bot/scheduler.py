@@ -60,7 +60,7 @@ class SchedulerCog(commands.Cog):
 
             print(f"[Scheduler] morning quests: {len(discord_ids)} users", flush=True)
             for discord_id in discord_ids:
-                await quest_cog.send_daily_quests(discord_id)
+                await quest_cog.send_daily_quests(discord_id, skip_flow=True)
                 print(f"[Scheduler] quests sent to {discord_id}", flush=True)
         except Exception:
             log.exception("morning_task failed")
@@ -153,7 +153,7 @@ class SchedulerCog(commands.Cog):
                         )
                         if not has_quests:
                             print(f"[Catchup-loop] sending quests to {user.discord_id}", flush=True)
-                            await quest_cog.send_daily_quests(user.discord_id)
+                            await quest_cog.send_daily_quests(user.discord_id, skip_flow=True)
 
     @catchup_loop.before_loop
     async def before_catchup_loop(self):
@@ -206,7 +206,7 @@ class SchedulerCog(commands.Cog):
                 print(f"[Catch-up] quest catch-up: {len(no_quest_ids)} users need quests", flush=True)
                 for discord_id in no_quest_ids:
                     print(f"[Catch-up] sending quests to {discord_id}", flush=True)
-                    await quest_cog.send_daily_quests(discord_id)
+                    await quest_cog.send_daily_quests(discord_id, skip_flow=True)
             else:
                 print("[Catch-up] WARNING: QuestUICog not found", flush=True)
 
