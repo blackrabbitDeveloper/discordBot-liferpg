@@ -12,6 +12,21 @@ class AdminCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    @app_commands.command(name="cleanup", description="봇이 보낸 중복/불필요한 DM 메시지를 정리합니다")
+    @app_commands.describe(count="삭제할 최대 메시지 수 (기본 10)")
+    async def cleanup(self, interaction: discord.Interaction, count: int = 10):
+        await interaction.response.defer(ephemeral=True)
+        try:
+            dm = await interaction.user.create_dm()
+            deleted = 0
+            async for msg in dm.history(limit=100):
+                if msg.author.id == self.bot.user.id and deleted < count:
+                    await msg.delete()
+                    deleted += 1
+            await interaction.followup.send(f"DM 메시지 {deleted}개 삭제 완료!", ephemeral=True)
+        except Exception as e:
+            await interaction.followup.send(f"삭제 실패: {e}", ephemeral=True)
+
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
         """서버를 나간 유저를 자동으로 inactive 처리."""
