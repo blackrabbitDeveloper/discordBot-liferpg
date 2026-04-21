@@ -54,7 +54,6 @@ def generate_daily_quests(
     else:
         difficulty = user.difficulty_preference
 
-    print(f"[QuestEngine] pool categories: {list(quest_pool.keys())}, total={sum(len(v) for v in quest_pool.values())}", flush=True)
     filtered = filter_quests(
         quest_pool,
         category=category,
@@ -62,19 +61,6 @@ def generate_daily_quests(
         time_budget=user.time_budget,
         difficulty=difficulty,
     )
-    print(f"[QuestEngine] after filter: {len(filtered)} (cat={category} e={energy} t={user.time_budget} d={difficulty})", flush=True)
-
-    if len(filtered) < 3:
-        all_filtered = filter_quests(
-            quest_pool,
-            energy=energy,
-            time_budget=user.time_budget,
-            difficulty=difficulty,
-        )
-        print(f"[QuestEngine] fallback filter (no category): {len(all_filtered)}", flush=True)
-        for q in all_filtered:
-            if q not in filtered:
-                filtered.append(q)
 
     # 최근 3일 완료 퀘스트 제외
     recent_titles = set()
@@ -93,6 +79,19 @@ def generate_daily_quests(
             recent_titles.add(pq.title)
 
     filtered = [q for q in filtered if q["title"] not in recent_titles]
+
+    # 카테고리 내에서 부족하면 다른 카테고리에서 보충
+    if len(filtered) < 3:
+        all_filtered = filter_quests(
+            quest_pool,
+            energy=energy,
+            time_budget=user.time_budget,
+            difficulty=difficulty,
+        )
+        all_filtered = [q for q in all_filtered if q["title"] not in recent_titles]
+        for q in all_filtered:
+            if q not in filtered:
+                filtered.append(q)
 
     # 최근 완료율 낮으면 easy 위주로
     completion_rate = _get_recent_completion_rate(session, user, game_date)
