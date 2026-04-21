@@ -168,6 +168,14 @@ class SchedulerCog(commands.Cog):
         now = datetime.now(KST)
         game_date = get_game_date(now)
         print(f"[Catch-up] start at {now.strftime('%H:%M')} KST (game_date={game_date})", flush=True)
+
+        # DEBUG: 오늘 퀘스트 전체 상태 덤프
+        with get_session() as session:
+            all_quests = session.query(DailyQuest).filter_by(quest_date=game_date).all()
+            for q in all_quests:
+                user = session.query(User).filter_by(id=q.user_id).first()
+                did = user.discord_id if user else "?"
+                print(f"[DEBUG] quest id={q.id} user={did} state={q.state} msg_id={q.message_id}", flush=True)
         log.info("Catch-up check at %s (game_date=%s)", now.strftime("%H:%M"), game_date)
 
         try:
