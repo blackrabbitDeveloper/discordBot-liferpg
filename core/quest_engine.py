@@ -54,6 +54,7 @@ def generate_daily_quests(
     else:
         difficulty = user.difficulty_preference
 
+    print(f"[QuestEngine] pool categories: {list(quest_pool.keys())}, total={sum(len(v) for v in quest_pool.values())}", flush=True)
     filtered = filter_quests(
         quest_pool,
         category=category,
@@ -61,6 +62,7 @@ def generate_daily_quests(
         time_budget=user.time_budget,
         difficulty=difficulty,
     )
+    print(f"[QuestEngine] after filter: {len(filtered)} (cat={category} e={energy} t={user.time_budget} d={difficulty})", flush=True)
 
     if len(filtered) < 3:
         all_filtered = filter_quests(
@@ -69,6 +71,7 @@ def generate_daily_quests(
             time_budget=user.time_budget,
             difficulty=difficulty,
         )
+        print(f"[QuestEngine] fallback filter (no category): {len(all_filtered)}", flush=True)
         for q in all_filtered:
             if q not in filtered:
                 filtered.append(q)
