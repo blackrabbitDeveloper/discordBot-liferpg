@@ -146,12 +146,16 @@ class SchedulerCog(commands.Cog):
                 with get_session() as session:
                     users = session.query(User).filter_by(status="active").all()
                     for user in users:
-                        has_quests = (
+                        quests = (
                             session.query(DailyQuest)
                             .filter_by(user_id=user.id, quest_date=game_date)
-                            .first()
+                            .all()
                         )
-                        if not has_quests:
+                        needs_send = (
+                            not quests
+                            or any(q.state == "PENDING" and not q.message_id for q in quests)
+                        )
+                        if needs_send:
                             print(f"[Catchup-loop] sending quests to {user.discord_id}", flush=True)
                             await quest_cog.send_daily_quests(user.discord_id, skip_flow=True)
 
@@ -194,18 +198,24 @@ class SchedulerCog(commands.Cog):
                 with get_session() as session:
                     users = session.query(User).filter_by(status="active").all()
                     no_quest_ids = []
+                    unsent_ids = []
                     for user in users:
-                        has_quests = (
+                        quests = (
                             session.query(DailyQuest)
                             .filter_by(user_id=user.id, quest_date=game_date)
-                            .first()
+                            .all()
                         )
-                        if not has_quests:
+                        if not quests:
                             no_quest_ids.append(user.discord_id)
+                        elif any(q.state == "PENDING" and not q.message_id for q in quests):
+                            unsent_ids.append(user.discord_id)
 
-                print(f"[Catch-up] quest catch-up: {len(no_quest_ids)} users need quests", flush=True)
+                print(f"[Catch-up] quest catch-up: {len(no_quest_ids)} need quests, {len(unsent_ids)} need resend", flush=True)
                 for discord_id in no_quest_ids:
                     print(f"[Catch-up] sending quests to {discord_id}", flush=True)
+                    await quest_cog.send_daily_quests(discord_id, skip_flow=True)
+                for discord_id in unsent_ids:
+                    print(f"[Catch-up] resending unsent quests to {discord_id}", flush=True)
                     await quest_cog.send_daily_quests(discord_id, skip_flow=True)
             else:
                 print("[Catch-up] WARNING: QuestUICog not found", flush=True)
