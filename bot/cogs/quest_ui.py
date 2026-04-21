@@ -116,10 +116,10 @@ class QuestUICog(commands.Cog):
             print(f"[QuestUI] _send_quest_dms fetch_user failed for {user_discord_id}: {e}", flush=True)
             return
 
-        for quest in quests:
-            if quest.state != "PENDING":
-                continue
+        pending = [q for q in quests if q.state == "PENDING"]
+        print(f"[QuestUI] _send_quest_dms: {len(quests)} quests, {len(pending)} pending for {user_discord_id}", flush=True)
 
+        for quest in pending:
             embed = discord.Embed(
                 title=quest.title,
                 description=quest.description,
@@ -137,8 +137,11 @@ class QuestUICog(commands.Cog):
             try:
                 msg = await discord_user.send(embed=embed, view=view)
                 quest.message_id = str(msg.id)
+                print(f"[QuestUI] quest {quest.id} sent to {user_discord_id}", flush=True)
             except discord.Forbidden:
-                pass
+                print(f"[QuestUI] quest DM forbidden for {user_discord_id}", flush=True)
+            except Exception as e:
+                print(f"[QuestUI] quest DM failed for {user_discord_id}: {e}", flush=True)
 
         session.commit()
 
