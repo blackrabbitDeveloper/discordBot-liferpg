@@ -121,7 +121,7 @@ class QuestUICog(commands.Cog):
             print(f"[QuestUI] _send_quest_dms fetch_user failed for {user_discord_id}: {e}", flush=True)
             return
 
-        pending = [q for q in quests if q.state == "PENDING"]
+        pending = [q for q in quests if q.state == "PENDING" and not q.message_id]
         print(f"[QuestUI] _send_quest_dms: {len(quests)} quests, {len(pending)} pending for {user_discord_id}", flush=True)
 
         for quest in pending:
