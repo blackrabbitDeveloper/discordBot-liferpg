@@ -37,7 +37,8 @@ class QuestUICog(commands.Cog):
 
             try:
                 discord_user = await self.bot.fetch_user(int(user_discord_id))
-            except Exception:
+            except Exception as e:
+                print(f"[QuestUI] fetch_user failed for {user_discord_id}: {e}", flush=True)
                 return
 
             energy_override = None
@@ -54,6 +55,10 @@ class QuestUICog(commands.Cog):
                 try:
                     flow_msg = await discord_user.send(embed=embed, view=flow_view)
                 except discord.Forbidden:
+                    print(f"[QuestUI] DM forbidden for {user_discord_id}", flush=True)
+                    return
+                except Exception as e:
+                    print(f"[QuestUI] send DM failed for {user_discord_id}: {e}", flush=True)
                     return
 
                 await flow_view.wait()
@@ -107,7 +112,8 @@ class QuestUICog(commands.Cog):
         """퀘스트를 개별 DM으로 발송."""
         try:
             discord_user = await self.bot.fetch_user(int(user_discord_id))
-        except Exception:
+        except Exception as e:
+            print(f"[QuestUI] _send_quest_dms fetch_user failed for {user_discord_id}: {e}", flush=True)
             return
 
         for quest in quests:
